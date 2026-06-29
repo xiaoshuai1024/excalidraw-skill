@@ -1,0 +1,13 @@
+{
+  "name": "excalidraw",
+  "title": "Excalidraw Hand-drawn Diagrams",
+  "description": "Render hand-drawn style diagrams (flowcharts, architecture, ER, sequence) using the real Excalidraw engine. Exports SVG + PNG.",
+  "categories": ["design", "development"],
+  "authors": [
+    {
+      "name": "xiaoshuai",
+      "url": "https://github.com/xiaoshuai1024"
+    }
+  ],
+  "license": "MIT"
+}

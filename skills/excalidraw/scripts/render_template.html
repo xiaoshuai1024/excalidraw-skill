@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Excalidraw renderer</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #ffffff; overflow: hidden; }
+    /* The SVG must be laid out on screen for svg_el.screenshot() to capture it. */
+    #root { display: inline-block; }
+    #root svg { display: block; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="module">
+    // Load Excalidraw once, as a module. We expose a Promise that resolves only
+    // AFTER the dynamic import has completed, so the Python driver never calls
+    // renderDiagram before exportToSvg is actually available. This removes the
+    // race that the __moduleReady-flag approach has (a flag set by the module
+    // script running does not mean the import() inside it has finished).
+    //
+    // Version is pinned. The `?bundle` query is REQUIRED: without it, esm.sh
+    // serves Excalidraw as dozens of cascading module requests (react,
+    // radix-ui, ...) and the total load time blows past any reasonable
+    // timeout. Bundling collapses it into one fetch.
+    const EXCAL_VERSION = "0.18.0";
+
+    window.__excalReady = import(`https://esm.sh/@excalidraw/excalidraw@${EXCAL_VERSION}?bundle`)
+      .then((mod) => {
+        if (typeof mod.exportToSvg !== "function") {
+          throw new Error(
+            "Loaded Excalidraw module has no exportToSvg. " +
+            "The package layout may have changed; check the pinned version."
+          );
+        }
+        window.__excal = mod;
+        // Plain boolean the driver can poll with wait_for_function (which does
+        // not support `await`). Set ONLY after the module is fully usable.
+        window.__excalDone = true;
+      })
+      .catch((err) => {
+        // Surface the failure so the driver can read it instead of timing out.
+        window.__excalError = String(err && err.message ? err.message : err);
+        window.__excalDone = true;
+      });
+
+    /**
+     * Render an Excalidraw scene to an <svg> element appended to #root.
+     *
+     * The scene is passed as a single object { elements, appState, files } and
+     * run through Excalidraw's `restore()` first, which normalizes the data
+     * (fills missing fields like index/frameId that the renderer requires).
+     * Then exportToSvg is called with the OBJECT form
+     * {elements, appState, files} — verified against @excalidraw/excalidraw
+     * 0.18: the positional form silently produces an empty 40x40 canvas.
+     *
+     * Returns { success, error, width, height }.
+     */
+    window.renderDiagram = async function (scene) {
+      try {
+        await window.__excalReady;
+
+        const excal = window.__excal;
+        // restore() is the official "recover from persisted data" path; it
+        // fills in fields the export path needs. Without it, elements missing
+        // index/frameId render as nothing.
+        let normalized;
+        try {
+          normalized = excal.restore(scene, null);
+        } catch (e) {
+          // restore is picky; if it fails, fall back to raw scene.
+          normalized = { elements: scene.elements, appState: scene.appState, files: scene.files };
+        }
+
+        // convertToExcalidrawElements re-validates the elements and, crucially,
+        // recomputes text metrics (width/height) from the actual text content
+        // and font. Hand-authored text elements often carry wrong or stale
+        // metrics, which makes exportToSvg silently drop them. Running this
+        // conversion is what makes text appear in the output.
+        let elements = normalized.elements;
+        if (typeof excal.convertToExcalidrawElements === "function") {
+          try {
+            elements = excal.convertToExcalidrawElements(normalized.elements);
+          } catch (e) {
+            // fall back to restored elements
+          }
+        }
+
+        const appState = Object.assign(
+          { exportBackground: true, exportWithDarkMode: false, viewBackgroundColor: "#ffffff" },
+          normalized.appState || {}
+        );
+
+        // OBJECT form — do NOT switch to positional args; they break in 0.18.
+        const svg = await excal.exportToSvg({
+          elements: elements,
+          appState: appState,
+          files: normalized.files || {},
+        });
+
+        if (!svg || svg.tagName.toLowerCase() !== "svg") {
+          throw new Error(
+            "exportToSvg did not return an <svg> element " +
+            "(got " + (svg ? svg.tagName : "null") + ")."
+          );
+        }
+
+        const root = document.getElementById("root");
+        root.innerHTML = "";
+        root.appendChild(svg);
+
+        window.__lastSvg = new XMLSerializer().serializeToString(svg);
+
+        return {
+          success: true,
+          width: svg.getAttribute("width"),
+          height: svg.getAttribute("height"),
+        };
+      } catch (err) {
+        return { success: false, error: String(err && err.message ? err.message : err) };
+      }
+    };
+  </script>
+</body>
+</html>

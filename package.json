@@ -1,0 +1,25 @@
+{
+  "name": "excalidraw-skill",
+  "version": "0.1.0",
+  "description": "An agent skill that renders hand-drawn Excalidraw diagrams to SVG/PNG using the real Excalidraw engine. Install with: npx skills add <owner>/excalidraw-skill",
+  "license": "MIT",
+  "keywords": [
+    "excalidraw",
+    "agent-skill",
+    "claude-code",
+    "zcode",
+    "opencode",
+    "diagram",
+    "svg",
+    "hand-drawn"
+  ],
+  "scripts": {
+    "test": "node test/render.test.mjs",
+    "render": "python3 skills/excalidraw/scripts/render.py"
+  },
+  "files": [
+    "skills/",
+    "skills.sh.json",
+    "README.md"
+  ]
+}
