@@ -97,36 +97,36 @@ Not a reimplementation — this is the real Excalidraw engine (rough.js, Virgil 
 
 ## Examples
 
-Generated examples under `test/output/` (10 diagrams) and `test/all/output/` (16 diagrams), each with `.excalidraw` source + `.svg` + `.png`.
+Generated examples under `examples/output/` (10 diagrams) and `examples/all/` (16 diagrams), each with `.excalidraw` source + `.svg` + `.png`.
 
 | File | Type |
 |---|---|
-| `test/diagrams/01-business-architecture.excalidraw` | 3-layer business architecture |
-| `test/diagrams/02-deployment-architecture.excalidraw` | K8s deployment topology |
-| `test/diagrams/03-flowchart.excalidraw` | Registration flowchart |
-| `test/diagrams/04-sequence-diagram.excalidraw` | Payment sequence (UML) |
-| `test/diagrams/05-er-diagram.excalidraw` | ER with Crow's Foot |
-| `test/diagrams/06-state-machine.excalidraw` | Order state machine (UML) |
-| `test/diagrams/07-mindmap.excalidraw` | Product planning mindmap |
-| `test/diagrams/08-network-topology.excalidraw` | Network topology |
-| `test/diagrams/09-user-journey.excalidraw` | User journey map |
-| `test/diagrams/10-component-diagram.excalidraw` | Component diagram |
-| `test/all/37-raci-matrix.excalidraw` | RACI matrix |
-| `test/all/38-impact-effort-matrix.excalidraw` | Impact-effort prioritization |
-| `test/all/39-risk-matrix.excalidraw` | Risk matrix |
-| `test/all/40-stakeholder-map.excalidraw` | Stakeholder map |
-| `test/all/41-value-stream-map.excalidraw` | Value stream map |
-| `test/all/42-kanban-board.excalidraw` | Kanban board |
-| `test/all/44-event-storming.excalidraw` | Event Storming (DDD) |
-| `test/all/45-context-map.excalidraw` | Context Map (DDD) |
-| `test/all/48-git-branch-strategy.excalidraw` | Git Flow |
-| `test/all/50-system-landscape.excalidraw` | System landscape |
-| `test/all/51-technology-radar.excalidraw` | Technology radar |
-| `test/all/53-nfr-quality-tree.excalidraw` | NFR quality tree |
-| `test/all/55-api-service-interaction.excalidraw` | API call flow |
-| `test/all/58-kano-model.excalidraw` | Kano model |
-| `test/all/60-business-model-canvas.excalidraw` | Business Model Canvas |
-| `test/all/63-stride-threat-model.excalidraw` | STRIDE threat model |
+| `examples/diagrams/01-business-architecture.excalidraw` | 3-layer business architecture |
+| `examples/diagrams/02-deployment-architecture.excalidraw` | K8s deployment topology |
+| `examples/diagrams/03-flowchart.excalidraw` | Registration flowchart |
+| `examples/diagrams/04-sequence-diagram.excalidraw` | Payment sequence (UML) |
+| `examples/diagrams/05-er-diagram.excalidraw` | ER with Crow's Foot |
+| `examples/diagrams/06-state-machine.excalidraw` | Order state machine (UML) |
+| `examples/diagrams/07-mindmap.excalidraw` | Product planning mindmap |
+| `examples/diagrams/08-network-topology.excalidraw` | Network topology |
+| `examples/diagrams/09-user-journey.excalidraw` | User journey map |
+| `examples/diagrams/10-component-diagram.excalidraw` | Component diagram |
+| `examples/all/37-raci-matrix.excalidraw` | RACI matrix |
+| `examples/all/38-impact-effort-matrix.excalidraw` | Impact-effort prioritization |
+| `examples/all/39-risk-matrix.excalidraw` | Risk matrix |
+| `examples/all/40-stakeholder-map.excalidraw` | Stakeholder map |
+| `examples/all/41-value-stream-map.excalidraw` | Value stream map |
+| `examples/all/42-kanban-board.excalidraw` | Kanban board |
+| `examples/all/44-event-storming.excalidraw` | Event Storming (DDD) |
+| `examples/all/45-context-map.excalidraw` | Context Map (DDD) |
+| `examples/all/48-git-branch-strategy.excalidraw` | Git Flow |
+| `examples/all/50-system-landscape.excalidraw` | System landscape |
+| `examples/all/51-technology-radar.excalidraw` | Technology radar |
+| `examples/all/53-nfr-quality-tree.excalidraw` | NFR quality tree |
+| `examples/all/55-api-service-interaction.excalidraw` | API call flow |
+| `examples/all/58-kano-model.excalidraw` | Kano model |
+| `examples/all/60-business-model-canvas.excalidraw` | Business Model Canvas |
+| `examples/all/63-stride-threat-model.excalidraw` | STRIDE threat model |
 
 ## Repo structure
 
@@ -141,12 +141,15 @@ skills/excalidraw/           # skill body (installed by npx skills add)
     all-diagram-types.md     # 64 diagram types + notation reference
     element-templates.md     # JSON templates per element type
     examples/                # working .excalidraw scenes
-test/                        # generators + output
+examples/                    # demo diagrams + generators + rendered output
   gen-diagrams.py            # generates 10 diagrams
   gen-all-diagrams.py        # generates 16 more
-  render.test.mjs            # 11 integration tests
   diagrams/                  # scene JSONs (10)
   all/                       # scene JSONs (16)
+  output/                    # rendered .svg + .png (26 diagrams)
+test/                        # integration tests
+  render.test.mjs            # 11 integration tests (run: node test/render.test.mjs)
+  check.mjs                  # post-render quality / regression checks
 assets/                      # README demo image
 ```
 
