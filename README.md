@@ -1,176 +1,137 @@
 # excalidraw-skill
 
-> 让你的 AI agent 画手绘风格的架构图、流程图、时序图，并导出 SVG / PNG。
-> 用真正的 Excalidraw 引擎渲染，不是重实现。
+> 让 AI agent 画手绘风格的架构图、流程图、时序图，用真正的 Excalidraw 引擎渲染，导出 SVG + PNG。
 
-[![tests](https://img.shields.io/badge/tests-11%20passed-brightgreen)](#测试)
 [![license](https://img.shields.io/badge/license-MIT-blue)](#license)
+[![install](https://img.shields.io/badge/npx-skills%20add%20xiaoshuai1024%2Fexcalidraw--skill-2ea44f)](#安装)
 
-## 这是什么
+## 效果：画一张图长这样
 
-一个 [agent skill](https://agentskills.io/)。装上之后，你的 coding agent（Claude Code / ZCode / OpenCode / Cursor 等几十种）就能：
+下面这张 CI/CD 流水线 + 微服务架构图，是由 agent 说一句「画一个带 CI/CD 流水线的微服务架构」生成的，**59 个元素、3 个分组区域、决策节点、数据库、缓存、CDN**——全部用官方 Excalidraw 渲染，手绘风格：
 
-1. 把你说的「画一个登录流程图」「给我看这个微服务架构」**生成为 Excalidraw scene JSON**。
-2. 调用本 skill 的渲染脚本，**用官方 Excalidraw 引擎**把它渲染成图片。
-3. 输出 **SVG（矢量，可拖回 excalidraw.com 编辑）+ PNG（位图，方便贴到聊天/文档）**。
+![CI/CD + Microservice Platform](assets/diagram.png)
 
-下面这张图就是它自己渲染出来的 —— 一个电商微服务架构，40 个元素：
+想看矢量版？点 [`assets/diagram.svg`](assets/diagram.svg)，直接拖进 [excalidraw.com](https://excalidraw.com) 就能继续编辑、改色、挪位置。
 
-![E-Commerce Microservice Architecture](assets/architecture.png)
+## 它解决什么问题
 
-（想看矢量版？点 [`assets/architecture.svg`](assets/architecture.svg)，拖进 [excalidraw.com](https://excalidraw.com) 就能继续编辑。）
+让 AI agent **真正画出可用的架构图**，而不是只能描述。具体三件事：
+
+1. **生成**：你用自然语言描述，agent 把它转成 Excalidraw scene JSON（矩形、椭圆、菱形、箭头、文本，带分组、配色、连接）。
+2. **渲染**：调用真实 Excalidraw 引擎出图——手绘抖动、Virgil 手写字体、所有视觉细节和 excalidraw.com 里一模一样，不是任何重实现。
+3. **导出**：同时输出 **SVG（矢量，拖回 excalidraw.com 可继续编辑）+ PNG（贴文档/聊天用）**。
 
 ## 安装
 
-**一行命令**，通过 [vercel-labs/skills](https://github.com/vercel-labs/skills) 的通用 skill 安装器（支持 70+ 种 agent）：
+一行命令，通过 [vercel-labs/skills](https://github.com/vercel-labs/skills) 的通用 skill 安装器（支持 Claude Code、ZCode、OpenCode、Cursor 等 70+ 种 agent）：
 
 ```bash
-npx skills add <your-github-name>/excalidraw-skill
+npx skills add xiaoshuai1024/excalidraw-skill
 ```
 
-它会把 skill 复制到你当前项目的 agent skills 目录（Claude Code 是 `.claude/skills/`，ZCode 是 `.agents/skills/`，依此类推）。第一次渲染前装一下渲染依赖：
+它会把 skill 复制到你项目的 agent skills 目录（`.claude/skills/`、`.agents/skills/`、`.opencode/skills/` 等，按你用的 agent 自动适配）。
+
+首次渲染前装一下渲染依赖（Playwright + Chromium，一次性）：
 
 ```bash
 bash skills/excalidraw/scripts/install.sh
 ```
 
-这会装 `playwright` 和 Chromium（~150MB，一次性）。**不需要 npm / node** —— Excalidraw 本身是在渲染时从 CDN 加载的。
+## 怎么用
 
-## 用法
+### 方式一：跟 agent 说人话（推荐）
 
-直接跟你的 agent 说人话：
+装好后直接对你的 coding agent 说：
 
 ```
 > 画一个用户登录的流程图，手绘风格
-> 帮我把这个支付系统的架构图画成 excalidraw
+> 把这个支付系统的架构画成 excalidraw
 > 画一个时序图：客户端 → API → 数据库 → 缓存
+> 我要一张电商下单的全链路架构图
 ```
 
-agent 会生成 `.excalidraw` 文件，调用渲染脚本，吐出 `.svg` + `.png`。
+agent 会自动生成 `.excalidraw` 文件、调用渲染脚本、吐出 `.svg` + `.png`。整个过程你不用碰 JSON。
 
-**手动渲染（不走 agent 时）**：
+### 方式二：手动渲染
+
+已经有 `.excalidraw` 文件（从 excalidraw.com 导出的也行），直接渲染：
 
 ```bash
-python3 skills/excalidraw/scripts/render.py diagram.excalidraw
-# → diagram.svg + diagram.png
+# 默认：同时出 SVG + PNG
+python3 skills/excalidraw/scripts/render.py my-diagram.excalidraw
+# → my-diagram.svg + my-diagram.png
 
-# 只要 SVG
-python3 skills/excalidraw/scripts/render.py diagram.excalidraw --format svg
+# 只要矢量 SVG
+python3 skills/excalidraw/scripts/render.py my-diagram.excalidraw --format svg
 
-# 高清 PNG
-python3 skills/excalidraw/scripts/render.py diagram.excalidraw --scale 4
+# 超高清 PNG（4x）
+python3 skills/excalidraw/scripts/render.py my-diagram.excalidraw --scale 4
+
+# 指定输出位置
+python3 skills/excalidraw/scripts/render.py my-diagram.excalidraw -o docs/architecture
 ```
+
+### 命令选项
 
 | 选项 | 作用 |
 |------|------|
 | `--format svg\|png\|both` | 输出格式，默认 `both` |
-| `--output PATH` | 输出路径（不带扩展名，脚本自动加 `.svg`/`.png`） |
-| `--scale N` | PNG 的 device scale factor，2 = retina（默认），SVG 永远矢量 |
+| `--output PATH` | 输出路径（不带扩展名，自动加 `.svg`/`.png`） |
+| `--scale N` | PNG 分辨率倍数，2 = retina（默认）；SVG 恒为矢量 |
 | `--keep-seed` | 保留已有 seed，用于精确复现上一次渲染 |
 
-## 它解决什么问题
+## 适合画什么
 
-市面上的 Excalidraw agent skill 有几个**致命毛病**，这个 skill 是来填坑的：
+| 图类型 | 示例 |
+|--------|------|
+| 系统架构图 | 微服务、组件关系、部署拓扑（上面的 CI/CD 图就是） |
+| 流程图 | 业务流程、状态机、决策树 |
+| 时序图 | 请求链路、跨服务调用 |
+| ER 图 | 数据库表关系 |
+| 线框图 | 简单的 UI 草图 |
 
-| 别人的问题 | 这个 skill 怎么办 |
-|-----------|------------------|
-| **seed 硬编码** —— 所有相同形状抖动一模一样，看着像盖戳，手绘的灵魂没了 | 渲染时**自动注入随机 seed**，每次抖动都不同，真·手绘感 |
-| **只出 PNG** —— 丢掉矢量，放大糊，没法重新编辑 | **SVG + PNG 都出**；SVG 内嵌字体，可拖回 excalidraw.com 继续改 |
-| **module 加载竞态** —— 标志位在 import 完成前就置位，首次渲染经常空白 | 用 promise 驱动的 `__excalDone` 布尔，**import 完成才置 true**，零竞态 |
-| **调用签名踩坑** —— 位置参数在 Excalidraw 0.18 会静默返回空白画布 | 用**对象参数 + `restore()` + `convertToExcalidrawElements()`**，文本不再丢失 |
-| **文案绑死品牌色 / 特定技术栈** —— 换个项目就得改 skill | 用 Excalidraw 默认调色板，**完全通用** |
-| **Chromium 没装直接崩** | 检测到缺失 → 引导跑 `install.sh`，不让你猜 |
+颜色用 Excalidraw 默认调色板（蓝/绿/黄/红/紫/灰），按角色区分：边缘入口、服务、决策、数据存储、缓存、外部依赖。
 
-这些坑不是猜的 —— 是**实测踩出来的**：位置参数那一条，源码看着像位置参数，实际跑起来返回 40×40 空白，测了才知道要用对象参数。
-
-## 怎么工作
+## 它怎么工作
 
 ```
-.excalidraw (你/agent 写的 scene JSON)
-        │
-        ▼
-render.py  ── 注入随机 seed（修复手绘死板）
-        │
-        ▼
-headless Chromium  ── 加载 render_template.html
-        │
-        ▼
-esm.sh CDN  ── 加载官方 @excalidraw/excalidraw@0.18.0
-        │
-        ▼
-restore() + convertToExcalidrawElements()  ── 规范化 + 重算文本度量
-        │
-        ▼
-exportToSvg({elements, appState, files})  ── 官方渲染引擎
-        │
-        ▼
-SVG 字符串  ──→  .svg 文件
-        │
-        └──────→  svg 元素截图  ──→  .png 文件
+你（或 agent）写 .excalidraw scene JSON
+        ↓
+render.py 注入随机 seed（手绘抖动的来源）
+        ↓
+headless Chromium 加载官方 @excalidraw/excalidraw
+        ↓
+restore() + convertToExcalidrawElements() 规范化数据
+        ↓
+exportToSvg() —— 官方渲染引擎，出 SVG
+        ↓
+SVG 文件  +  SVG 截图为 PNG 文件
 ```
 
-关键设计决策（都写在代码注释里，不是黑箱）：
-
-- **必须用 `?bundle`**：不 bundle，esm.sh 会发几十个级联请求，必然超时。
-- **必须 `restore()` + `convertToExcalidrawElements()`**：手写的 scene JSON 缺字段，文本度量算不对，会被 exportToSvg 静默丢弃。这俩函数是官方的「从持久化数据恢复」路径。
-- **必须对象参数**：`exportToSvg(elements, appState, files)` 在 0.18 会返回空白；`exportToSvg({elements, appState, files})` 才对。
-
-## 测试
-
-```bash
-node test/render.test.mjs
-```
-
-11 个集成测试，覆盖：错误输入（坏 JSON / 缺 elements / 空数组）、三种输出格式、scale 分辨率、seed 随机化、stdout 契约。**fail-fast**，第一个失败就停，给你最可操作的报错。
-
-```
-Excalidraw render pipeline — integration tests
-
-  PASS  rejects a non-existent input file
-  PASS  rejects malformed JSON
-  PASS  rejects a scene with no elements array
-  PASS  rejects an empty elements array
-  PASS  renders default (both SVG + PNG) from the example fixture
-  PASS  produces an SVG with real content (not the empty 40x40 failure case)
-  PASS  --format svg produces only SVG (no PNG)
-  PASS  --format png produces only PNG (no SVG)
-  PASS  --scale changes PNG file size (higher scale = larger file)
-  PASS  randomizes seed each run (two renders differ)
-  PASS  printed output is the file path(s)
-
-11 passed, 0 failed.
-```
+渲染用的是 Excalidraw 官方包的 `exportToSvg`，手绘抖动（rough.js）、Virgil 字体、配色全部是原版，和你在 excalidraw.com 里看到的一模一样。
 
 ## 仓库结构
 
 ```
 excalidraw-skill/
-├── skills/excalidraw/              # skill 本体（skills CLI 识别这个目录）
-│   ├── SKILL.md                    # agent 读这个，知道何时用 + 怎么生成 scene
+├── skills/excalidraw/              # skill 本体
+│   ├── SKILL.md                    # agent 读这个，知道何时用、怎么生成 scene
 │   ├── scripts/
-│   │   ├── render.py               # 渲染器（核心）
-│   │   ├── render_template.html    # 浏览器模板（加载 Excalidraw，消除竞态）
+│   │   ├── render.py               # 渲染器（核心，跑这个）
+│   │   ├── render_template.html    # 加载 Excalidraw 的浏览器模板
 │   │   └── install.sh              # 装依赖
 │   └── references/
 │       ├── element-templates.md    # 每种元素的 JSON 模板
 │       └── examples/
-│           ├── flowchart.excalidraw
-│           └── microservice-architecture.excalidraw   # README 那张图的源文件
-├── test/
-│   └── render.test.mjs             # 集成测试
-└── assets/                          # README 用的渲染产物
+│           ├── flowchart.excalidraw             # 简单流程图示例
+│           ├── cicd-microservice.excalidraw     # README 那张复杂图的源文件
+│           └── build-demo.py                    # 复杂图的生成脚本（参考）
+└── assets/diagram.{svg,png}        # README 展示用的渲染产物
 ```
 
-## 已知限制（不藏）
+## 致谢
 
-- **无自动布局** —— 元素坐标要你（或 agent）自己算。10 个元素以上会比较累，复杂图建议生成后拖进 excalidraw.com 微调。
-- **渲染时需联网** —— Excalidraw 从 esm.sh CDN 加载（你选的「不优化依赖」路线，可接受）。
-- **单文件渲染** —— 一次一张，不支持批量。
-- **无重叠检测** —— 元素重叠了渲染会照实画出来，靠你自己 review。
-
-## 参考
-
-本 skill 的渲染架构参考了 [coleam00/excalidraw-diagram-skill](https://github.com/coleam00/excalidraw-diagram-skill)，并修复了它的 seed 硬编码、仅 PNG、module 竞态、文本丢失等问题。渲染用的是官方 [excalidraw/excalidraw](https://github.com/excalidraw/excalidraw) 的 `exportToSvg`。
+渲染架构参考了 [coleam00/excalidraw-diagram-skill](https://github.com/coleam00/excalidraw-diagram-skill)，渲染引擎用的是官方 [excalidraw/excalidraw](https://github.com/excalidraw/excalidraw)。skill 安装走 [vercel-labs/skills](https://github.com/vercel-labs/skills) 生态。
 
 ## License
 

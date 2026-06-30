@@ -88,6 +88,41 @@
           }
         }
 
+        // Precisely re-center every bound text label inside its container.
+        // Hand-authored scenes (and our own generator) cannot know the exact
+        // pixel width of text in the Virgil font, so the stored x/y/width/height
+        // of bound text are usually wrong, and exportToSvg trusts them as-is.
+        // We measure each label with the real font and write back an exact
+        // centered position. fontFamily 1 = Virgil, 2 = Helvetica, etc.
+        try {
+          const canvas = document.createElement("canvas");
+          const ctx = canvas.getContext("2d");
+          const byId = new Map(elements.map((e) => [e.id, e]));
+          for (const t of elements) {
+            if (t.type !== "text" || !t.containerId) continue;
+            const box = byId.get(t.containerId);
+            if (!box) continue;
+            const fontName =
+              t.fontFamily === 2 ? "Helvetica" :
+              t.fontFamily === 3 ? "Cascadia, monospace" : "Virgil";
+            ctx.font = t.fontSize + "px " + fontName;
+            const lines = (t.text || "").split("\n");
+            const lh = t.lineHeight || 1.25;
+            const w = Math.max(...lines.map((l) => ctx.measureText(l).width));
+            const h = t.fontSize * lh * lines.length;
+            t.width = w;
+            t.height = h;
+            t.x = box.x + (box.width - w) / 2;
+            // Virgil (and similar hand-drawn fonts) render with a large
+            // ascender and small descender, so the geometric box-center of
+            // the text block looks too high. Nudge down by ~25% of the font
+            // size to land the visual baseline on center.
+            t.y = box.y + (box.height - h) / 2 + t.fontSize * 0.25;
+          }
+        } catch (e) {
+          // measurement best-effort; ignore failures
+        }
+
         const appState = Object.assign(
           { exportBackground: true, exportWithDarkMode: false, viewBackgroundColor: "#ffffff" },
           normalized.appState || {}
