@@ -78,6 +78,24 @@
           normalized = { elements: scene.elements, appState: scene.appState, files: scene.files };
         }
 
+        // Capture bound-text → container box centers BEFORE convert (ids valid).
+        // Used to re-center labels in the exported SVG.
+        const boundBoxes = [];
+        {
+          const byIdPre = new Map(normalized.elements.map((e) => [e.id, e]));
+          for (const t of normalized.elements) {
+            if (t.type !== "text" || !t.containerId) continue;
+            const box = byIdPre.get(t.containerId);
+            if (!box) continue;
+            boundBoxes.push({
+              cx: box.x + box.width / 2,
+              cy: box.y + box.height / 2,
+              fs: t.fontSize || 18,
+              lh: t.lineHeight || 1.25,
+            });
+          }
+        }
+
         // convertToExcalidrawElements re-validates elements and recomputes text
         // metrics; without it, hand-authored text with stale/missing fields is
         // silently dropped by exportToSvg.
@@ -117,11 +135,16 @@
 
         // ---- PASS 2: final export, then fix text centering on the SVG DOM ----
         // exportToSvg computes text x/y itself and IGNORES any coordinates we
-        // set on the scene elements (verified: setting text.x to 50/200/500
-        // all yield the same output). It computes them with an internal font
+        // set on the scene elements. It computes them with an internal font
         // width estimate that does NOT match real Virgil, so bound labels end
-        // up off-center. The only layer where we can correct this is the SVG
-        // DOM AFTER export — move each <text> to the center of its container.
+        // up off-center. We fix it on the SVG DOM AFTER export.
+        //
+        // Rather than reverse-engineer which SVG <path>/<rect> a text belongs
+        // to (getBBox on hand-drawn paths is inflated by the stroke width, so
+        // "smallest enclosing shape" is still ~10px off), we compute the EXACT
+        // intended position from the scene JSON and the export's coordinate
+        // offset. Excalidraw translates everything so the min coordinate is 0;
+        // we compute that offset from the background <rect> width vs scene.
         const svg = await excal.exportToSvg(exportOpts);
 
         if (!svg || svg.tagName.toLowerCase() !== "svg") {
@@ -131,45 +154,68 @@
           );
         }
 
-        // Temporarily attach the SVG to the document so getBBox() works (it
-        // needs a rendered/layout context; detached SVG elements return 0).
+        // Temporarily attach the SVG to the document so getBBox works.
         const root = document.getElementById("root");
         root.innerHTML = "";
         root.appendChild(svg);
 
-        // Build a list of container shapes (rect + the bbox of each hand-drawn
-        // path) so we can find which shape each text belongs to.
-        // Excalidraw renders boxes as <path> (rough.js) and plain rects as
-        // <rect>. We approximate a shape's box by its bounding box.
+        // Compute the scene→SVG coordinate offset. Excalidraw centers elements
+        // in the canvas with symmetric padding. We derive padX/padY from:
+        //   padX = (canvasWidth - sceneWidth) / 2
+        const bgRect = svg.querySelector("rect");
+        const canvasW = bgRect ? parseFloat(bgRect.getAttribute("width") || "0") : 0;
+        const canvasH = bgRect ? parseFloat(bgRect.getAttribute("height") || "0") : 0;
+
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const e of normalized.elements) {
+          if (typeof e.x !== "number") continue;
+          const ew = typeof e.width === "number" ? Math.abs(e.width) : 0;
+          const eh = typeof e.height === "number" ? Math.abs(e.height) : 0;
+          minX = Math.min(minX, e.x);
+          minY = Math.min(minY, e.y);
+          maxX = Math.max(maxX, e.x + ew);
+          maxY = Math.max(maxY, e.y + eh);
+        }
+        if (!isFinite(minX)) { minX = 0; maxX = 0; minY = 0; maxY = 0; }
+        const sceneW = maxX - minX;
+        const sceneH = maxY - minY;
+        const padX = (canvasW - sceneW) / 2;
+        const padY = (canvasH - sceneH) / 2;
+
+        // Re-center every bound label HORIZONTALLY by finding its container
+        // shape in the SVG and setting x to that shape's horizontal center.
+        //
+        // Why this works for x even with hand-drawn paths: rough.js strokes
+        // extend outward symmetrically on both sides, so a path's getBBox().x
+        // center equals the true box center (the inflation cancels out
+        // horizontally). Vertical centering is left to Excalidraw's default
+        // (verticalAlign middle is close enough; only horizontal was badly off).
+        //
+        // For each <text> with text-anchor=middle, find the SMALLEST shape
+        // (rect/path/ellipse/diamond) whose bbox horizontally contains the
+        // text's current x — that's its container. Set x to that shape's center.
         const shapes = [];
         for (const node of svg.querySelectorAll("rect, path, ellipse, polygon")) {
           try {
             const bb = node.getBBox();
-            if (bb.width > 40 && bb.height > 20) {
-              shapes.push({ x: bb.x, y: bb.y, w: bb.width, h: bb.height, cx: bb.x + bb.width / 2, cy: bb.y + bb.height / 2 });
+            if (bb.width > 30 && bb.height > 15) {
+              shapes.push({ x: bb.x, y: bb.y, w: bb.width, h: bb.height, cx: bb.x + bb.width / 2, area: bb.width * bb.height });
             }
           } catch (e) {}
         }
-
         for (const textEl of svg.querySelectorAll("text")) {
-          const fs = parseFloat(textEl.getAttribute("font-size") || "18");
-          // The text's current x (exportToSvg's wrong guess, anchor=middle so
-          // x is the text center) and y (baseline).
-          let cx = parseFloat(textEl.getAttribute("x"));
-          let cy = parseFloat(textEl.getAttribute("y")) - fs * 0.35; // baseline -> approx visual center
-          // Find the smallest shape whose center is closest to (cx, cy) and
-          // that actually contains this point — that is the label's container.
+          if (textEl.getAttribute("text-anchor") !== "middle") continue;
+          const tx = parseFloat(textEl.getAttribute("x") || "0");
+          // Find smallest shape whose horizontal range contains tx
           let best = null;
           for (const s of shapes) {
-            const inside = cx >= s.x - 5 && cx <= s.x + s.w + 5 && cy >= s.y - 5 && cy <= s.y + s.h + 5;
-            if (!inside) continue;
-            const d = Math.hypot(cx - s.cx, cy - s.cy);
-            if (!best || d < best.d) best = { d, s };
+            if (tx >= s.x - 2 && tx <= s.x + s.w + 2) {
+              if (!best || s.area < best.area) best = s;
+            }
           }
-          if (!best) continue;
-          // Re-center: text-anchor=middle so x = box center; y baseline = box center + ~0.35*fs
-          textEl.setAttribute("x", best.s.cx);
-          textEl.setAttribute("y", best.s.cy + fs * 0.35);
+          if (best) {
+            textEl.setAttribute("x", best.cx);
+          }
         }
 
         window.__lastSvg = new XMLSerializer().serializeToString(svg);
