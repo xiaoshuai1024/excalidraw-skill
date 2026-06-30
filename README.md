@@ -23,13 +23,38 @@
 
 ## 安装
 
-一行命令，通过 [vercel-labs/skills](https://github.com/vercel-labs/skills) 的通用 skill 安装器（支持 Claude Code、ZCode、OpenCode、Cursor 等 70+ 种 agent）：
+通过 [vercel-labs/skills](https://github.com/vercel-labs/skills) 的通用 skill 安装器，支持 **72 种 agent**（Claude Code、Cursor、ZCode、OpenCode、Copilot、Gemini CLI、Windsurf、Cline 等）：
 
 ```bash
 npx skills add xiaoshuai1024/excalidraw-skill
 ```
 
-它会把 skill 复制到你项目的 agent skills 目录（`.claude/skills/`、`.agents/skills/`、`.opencode/skills/` 等，按你用的 agent 自动适配）。
+运行后会**交互式让你选择装到哪些 agent**（空格勾选、回车确认）。也可以直接指定：
+
+```bash
+# 只装到 Claude Code
+npx skills add xiaoshuai1024/excalidraw-skill --agent claude
+
+# 装到多个 agent
+npx skills add xiaoshuai1024/excalidraw-skill --agent claude,cursor,opencode
+
+# 装到所有 72 种 agent
+npx skills add xiaoshuai1024/excalidraw-skill --agent '*'
+
+# 跳过确认，自动检测（项目内装项目级，否则全局）
+npx skills add xiaoshuai1024/excalidraw-skill -y
+```
+
+它会自动把 skill 放到对应 agent 的约定目录：
+
+| Agent | 安装目录 |
+|-------|---------|
+| 通用（默认包含） | `.agents/skills/excalidraw` |
+| Claude Code | `.claude/skills/excalidraw` |
+| Cursor | `.cursor/skills/excalidraw` |
+| OpenCode | `.opencode/skills/excalidraw` |
+| Copilot / Gemini CLI | `skills/excalidraw` |
+| 其他 60+ 种 | 各自的约定目录（安装器自动处理） |
 
 首次渲染前装一下渲染依赖（Playwright + Chromium，一次性）：
 
