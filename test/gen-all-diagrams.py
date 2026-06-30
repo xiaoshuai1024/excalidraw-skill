@@ -38,25 +38,28 @@ def diamond(x,y,w,h,label,fill="#ffec99",fs=12):
     return [d,t]
 
 def arrow(x1,y1,x2,y2,dashed=False,color="#1e1e1e"):
-    return base(type="arrow",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,strokeColor=color,
+    # Returns a single-element list so `e += arrow(...)` appends the element
+    # (list += dict would silently iterate the dict's KEYS — a Python gotcha).
+    return [base(type="arrow",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,strokeColor=color,
                 roundness={"type":2},strokeStyle="dashed" if dashed else "solid",
                 startBinding=None,endBinding=None,lastCommittedPoint=None,
-                startArrowhead=None,endArrowhead="arrow",points=[[0,0],[x2-x1,y2-y1]])
+                startArrowhead=None,endArrowhead="arrow",points=[[0,0],[x2-x1,y2-y1]])]
 
 def line(x1,y1,x2,y2,dashed=False):
-    return base(type="line",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,roundness={"type":2},
+    return [base(type="line",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,roundness={"type":2},
                 strokeStyle="dashed" if dashed else "solid",
-                lastCommittedPoint=None,points=[[0,0],[x2-x1,y2-y1]])
+                lastCommittedPoint=None,points=[[0,0],[x2-x1,y2-y1]])]
 
 def text(x,y,s,size=14,color="#1e1e1e"):
-    return base(type="text",id=nid(),x=x,y=y,width=len(s)*(size*0.55),height=size+4,fontSize=size,
+    return [base(type="text",id=nid(),x=x,y=y,width=len(s)*(size*0.55),height=size+4,fontSize=size,
                 fontFamily=1,textAlign="left",verticalAlign="top",containerId=None,
-                text=s,originalText=s,lineHeight=1.25,strokeColor=color)
+                text=s,originalText=s,lineHeight=1.25,strokeColor=color)]
 
 def region(x,y,w,h,title,color="#1971c2"):
     r=base(type="rectangle",id=nid(),x=x,y=y,width=w,height=h,strokeColor=color,
            backgroundColor="transparent",strokeStyle="dashed",roundness={"type":3})
-    return [r,text(x+14,y+8,title,14,color)]
+    # text() returns a list; flatten so the result is a flat list of elements.
+    return [r]+text(x+14,y+8,title,14,color)
 
 def scene(elements):
     return {"type":"excalidraw","version":2,"source":"https://excalidraw.com",
@@ -72,7 +75,7 @@ def add(name,fn): DIAGRAMS.append((name,fn))
 # ═══ 37. RACI Matrix (RACI矩阵) ═══
 def raci():
     e=[]
-    e+=[text(300,15,"用户注册功能 — RACI 矩阵",22)]
+    e += text(300,15,"用户注册功能 — RACI 矩阵",22)
     tasks=["需求评审","UI设计","前端开发","后端开发","测试","部署上线"]
     roles=["产品经理","设计师","前端","后端","QA","运维"]
     data=[["A","I","I","I","I","I"],
@@ -98,7 +101,7 @@ add("37-raci-matrix", raci)
 # ═══ 38. Impact-Effort Matrix (影响-努力矩阵) ═══
 def impact_effort():
     e=[]
-    e+=[text(300,15,"功能优先级 — 影响-努力矩阵",22)]
+    e += text(300,15,"功能优先级 — 影响-努力矩阵",22)
     e+=line(400,70,400,400); e+=line(100,240,700,240)
     e+=text(480,60,"高努力",12,C_RED); e+=text(160,60,"低努力",12,C_GREEN)
     e+=text(90,80,"高影响",12,C_GREEN); e+=text(90,380,"低影响",12,C_RED)
@@ -118,7 +121,7 @@ add("38-impact-effort-matrix", impact_effort)
 # ═══ 39. Risk Matrix (风险矩阵) ═══
 def risk_matrix():
     e=[]
-    e+=[text(300,15,"项目风险矩阵",22)]
+    e += text(300,15,"项目风险矩阵",22)
     # 5x5 grid
     for i in range(5):
         for j in range(5):
@@ -137,7 +140,7 @@ add("39-risk-matrix", risk_matrix)
 # ═══ 40. Stakeholder Map (干系人地图) ═══
 def stakeholder_map():
     e=[]
-    e+=[text(300,15,"项目干系人地图",22)]
+    e += text(300,15,"项目干系人地图",22)
     e+=line(60,300,780,300); e+=line(420,30,420,520)
     e+=text(440,40,"高权力",12); e+=text(200,40,"低权力",12)
     e+=text(30,60,"高兴趣",12); e+=text(30,480,"低兴趣",12)
@@ -157,7 +160,7 @@ add("40-stakeholder-map", stakeholder_map)
 # ═══ 41. Value Stream Map (价值流图) ═══
 def value_stream():
     e=[]
-    e+=[text(300,15,"需求交付价值流图",22)]
+    e += text(300,15,"需求交付价值流图",22)
     stages=[("需求分析",80,"LT=2d\nPT=4h"),("设计",280,"LT=1d\nPT=6h"),
             ("开发",480,"LT=5d\nPT=20h"),("测试",680,"LT=2d\nPT=8h"),
             ("部署",880,"LT=0.5d\nPT=1h")]
@@ -174,7 +177,7 @@ add("41-value-stream-map", value_stream)
 # ═══ 42. Kanban Board (看板) ═══
 def kanban():
     e=[]
-    e+=[text(300,15,"Sprint 看板",24)]
+    e += text(300,15,"Sprint 看板",24)
     cols=["Todo (WIP:8)","In Progress (WIP:4)","Review (WIP:3)","Done"]
     colors={"Todo (WIP:8)":C_GRAY,"In Progress (WIP:4)":C_BLUE,"Review (WIP:3)":C_YELLOW,"Done":C_GREEN}
     for j,col in enumerate(cols):
@@ -196,7 +199,7 @@ add("42-kanban-board", kanban)
 # ═══ 44. Event Storming (事件风暴) ═══
 def event_storming():
     e=[]
-    e+=[text(280,15,"下单流程 — Event Storming",22)]
+    e += text(280,15,"下单流程 — Event Storming",22)
     events=[("浏览商品",60),("加入购物车",200),("提交订单",340),("选择支付",480),("支付回调",620),("订单确认",760)]
     for i,(ev_name,x) in enumerate(events):
         e+=box(x,70,110,45,ev_name,C_ORANGE,11,roundness={"type":3})
@@ -215,7 +218,7 @@ add("44-event-storming", event_storming)
 # ═══ 45. Context Map (限界上下文映射) ═══
 def context_map():
     e=[]
-    e+=[text(280,15,"电商系统 — Context Map (DDD)",22)]
+    e += text(280,15,"电商系统 — Context Map (DDD)",22)
     e+=box(60,60,160,50,"订单上下文\n(Order)",C_GREEN,13)
     e+=box(300,60,160,50,"支付上下文\n(Payment)",C_BLUE,13)
     e+=box(540,60,160,50,"商品上下文\n(Product)",C_GREEN,13)
@@ -239,7 +242,7 @@ add("45-context-map", context_map)
 # ═══ 48. Git Branch Strategy (Git分支策略) ═══
 def git_strategy():
     e=[]
-    e+=[text(300,15,"Git Flow 分支策略",22)]
+    e += text(300,15,"Git Flow 分支策略",22)
     # main branch
     e+=line(40,60,900,60)
     e+=text(40,50,"main",14)
@@ -267,7 +270,7 @@ add("48-git-branch-strategy", git_strategy)
 # ═══ 50. System Landscape (系统景观图) ═══
 def system_landscape():
     e=[]
-    e+=[text(300,15,"电商平台 — 系统景观图",22)]
+    e += text(300,15,"电商平台 — 系统景观图",22)
     e+=region(40,60,300,180,"用户端")
     e+=box(60,100,120,50,"Web App",C_BLUE,14)
     e+=box(200,100,120,50,"小程序",C_BLUE,14)
@@ -291,7 +294,7 @@ add("50-system-landscape", system_landscape)
 # ═══ 51. Technology Radar (技术雷达) ═══
 def tech_radar():
     e=[]
-    e+=[text(300,15,"团队技术雷达 2026H1",22)]
+    e += text(300,15,"团队技术雷达 2026H1",22)
     rings=["Adopt(采纳)","Trial(试验)","Assess(评估)","Hold(暂缓)"]
     for i,ring in enumerate(rings):
         r=50+i*55
@@ -313,7 +316,7 @@ add("51-technology-radar", tech_radar)
 # ═══ 53. NFR / Quality Attribute Tree (质量属性树) ═══
 def nfr_tree():
     e=[]
-    e+=[text(280,15,"系统质量属性树 (NFR)",22)]
+    e += text(280,15,"系统质量属性树 (NFR)",22)
     root=(450,50)
     e+=box(root[0]-40,root[1],80,40,"系统质量",C_GREEN,13)
     branches=[("性能",200,120,C_BLUE),("安全",360,120,C_BLUE),("可用性",520,120,C_BLUE),
@@ -334,7 +337,7 @@ add("53-nfr-quality-tree", nfr_tree)
 # ═══ 55. API Service Interaction (API流转图) ═══
 def api_flow():
     e=[]
-    e+=[text(300,15,"下单 — API 调用链",22)]
+    e += text(300,15,"下单 — API 调用链",22)
     svcs=[("客户端",60,C_BLUE),("API GW",260,C_YELLOW),("订单服务",460,C_GREEN),("支付服务",660,C_RED)]
     for s_name,x,color in svcs:
         e+=box(x-50,70,100,45,s_name,color,14)
@@ -351,7 +354,7 @@ add("55-api-service-interaction", api_flow)
 # ═══ 58. Kano Model (卡诺模型) ═══
 def kano_model():
     e=[]
-    e+=[text(300,15,"产品功能 — Kano 模型分析",22)]
+    e += text(300,15,"产品功能 — Kano 模型分析",22)
     e+=line(80,380,880,380); e+=line(80,40,80,380)
     e+=text(90,50,"满意度",12); e+=text(840,390,"功能实现度",12)
     # Basic needs (bottom curve)
@@ -376,7 +379,7 @@ add("58-kano-model", kano_model)
 # ═══ 60. Business Model Canvas (商业模式画布) ═══
 def bmc():
     e=[]
-    e+=[text(300,15,"商业模式画布 (Business Model Canvas)",22)]
+    e += text(300,15,"商业模式画布 (Business Model Canvas)",22)
     cells=[("关键伙伴",30,70,220,120,C_GRAY),("关键活动",270,70,220,120,C_BLUE),("价值主张",510,70,220,180,C_GREEN),
            ("客户关系",750,70,220,120,C_YELLOW),("客户细分",990,70,220,280,C_PINK),
            ("核心资源",30,210,220,120,C_BLUE),("渠道",270,210,220,100,C_YELLOW),
@@ -390,7 +393,7 @@ add("60-business-model-canvas", bmc)
 # ═══ 63. Threat Model (威胁建模/STRIDE) ═══
 def threat_model():
     e=[]
-    e+=[text(300,15,"支付系统 — STRIDE 威胁建模",22)]
+    e += text(300,15,"支付系统 — STRIDE 威胁建模",22)
     e+=box(60,70,120,50,"用户\n(User)",C_BLUE,12)
     e+=box(300,70,140,50,"API Gateway\n(边界)",C_GREEN,12)
     e+=box(560,70,140,50,"支付服务\n(Payment)",C_GREEN,12)

@@ -52,26 +52,28 @@ def diamond(x,y,w,h,label,fill,fs=18):
     return [d,t]
 
 def arrow(x1,y1,x2,y2,dashed=False,color="#1e1e1e"):
-    return base(type="arrow",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,strokeColor=color,
+    # Returns a single-element list so `e += arrow(...)` appends the element
+    # (list += dict would silently iterate the dict's KEYS — a Python gotcha).
+    return [base(type="arrow",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,strokeColor=color,
                 roundness={"type":2},strokeStyle="dashed" if dashed else "solid",
                 startBinding=None,endBinding=None,lastCommittedPoint=None,
-                startArrowhead=None,endArrowhead="arrow",points=[[0,0],[x2-x1,y2-y1]])
+                startArrowhead=None,endArrowhead="arrow",points=[[0,0],[x2-x1,y2-y1]])]
 
 def line(x1,y1,x2,y2,dashed=False):
-    return base(type="line",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,roundness={"type":2},
+    return [base(type="line",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,roundness={"type":2},
                 strokeStyle="dashed" if dashed else "solid",
-                lastCommittedPoint=None,points=[[0,0],[x2-x1,y2-y1]])
+                lastCommittedPoint=None,points=[[0,0],[x2-x1,y2-y1]])]
 
 def text(x,y,s,size=18,color="#1e1e1e"):
-    return base(type="text",id=nid(),x=x,y=y,width=len(s)*10,height=size+4,fontSize=size,
+    return [base(type="text",id=nid(),x=x,y=y,width=len(s)*10,height=size+4,fontSize=size,
                 fontFamily=1,textAlign="left",verticalAlign="top",containerId=None,
-                text=s,originalText=s,lineHeight=1.25,strokeColor=color)
+                text=s,originalText=s,lineHeight=1.25,strokeColor=color)]
 
 def region(x,y,w,h,title,color="#1971c2"):
     r = base(type="rectangle",id=nid(),x=x,y=y,width=w,height=h,strokeColor=color,
              backgroundColor="transparent",strokeStyle="dashed",roundness={"type":3})
-    t = text(x+14,y+8,title,16,color)
-    return [r,t]
+    # text() returns a list; flatten so the result is a flat list of elements.
+    return [r] + text(x+14,y+8,title,16,color)
 
 def scene(elements, bg="#ffffff"):
     return {"type":"excalidraw","version":2,"source":"https://excalidraw.com",
@@ -84,7 +86,7 @@ C_PURPLE="#eebefa"; C_GRAY="#e9ecef"; C_ORANGE="#ffd8a8"
 # ── 1. Business Architecture (业务架构) ──────────────────────────────────────
 def biz_arch():
     e = []
-    e += [text(280,20,"电商业务架构图",24)]
+    e += text(280,20,"电商业务架构图",24)
     e += region(40,70,720,140,"用户层")
     e += box(80,110,140,60,"Web商城",C_BLUE)
     e += box(260,110,140,60,"移动App",C_BLUE)
@@ -110,7 +112,7 @@ def biz_arch():
 # ── 2. Deployment Architecture (部署架构) ────────────────────────────────────
 def deploy_arch():
     e=[]
-    e+=[text(260,20,"Kubernetes部署架构",24)]
+    e += text(260,20,"Kubernetes部署架构",24)
     e+=region(40,70,720,360,"K8s Cluster")
     e+=box(80,110,160,50,"Ingress\nController",C_BLUE,16)
     e+=box(280,110,160,50,"API Gateway",C_BLUE)
@@ -134,7 +136,7 @@ def deploy_arch():
 # ── 3. Flowchart (流程图) ────────────────────────────────────────────────────
 def flowchart():
     e=[]
-    e+=[text(250,20,"用户注册流程",24)]
+    e += text(250,20,"用户注册流程",24)
     e+=ellipse(280,70,140,60,"开始",C_GREEN)
     e+=box(270,160,160,50,"填写手机号",C_BLUE)
     e+=box(270,240,160,50,"发送验证码",C_BLUE)
@@ -153,7 +155,7 @@ def flowchart():
 # ── 4. Sequence Diagram (时序图) ────────────────────────────────────────────
 def sequence():
     e=[]
-    e+=[text(400,15,"支付时序图 — MVC + 外部银行",22)]
+    e += text(400,15,"支付时序图 — MVC + 外部银行",22)
     # Participants (矩形框在顶部), lifelines below
     actors=[("用户\n(User)",80),("API网关\n(Gateway)",280),("支付服务\n(Payment)",500),("银行\n(Bank)",720)]
     for name,x in actors:
@@ -165,9 +167,10 @@ def sequence():
     def msg(y,x1,x2,label,dashed=False,activate=None):
         msg_num[0] += 1
         lbl = f"{msg_num[0]}: {label}"
-        e.append(arrow(x1,y,x2,y,dashed=dashed))
+        # extend() (not +=) so `e` stays a closure var; arrow()/text() return lists.
+        e.extend(arrow(x1,y,x2,y,dashed=dashed))
         mx = (x1+x2)//2 - 40
-        e.append(text(mx,y-20,lbl,12))
+        e.extend(text(mx,y-20,lbl,12))
         # Activation box (thin rectangle on lifeline at message target)
         if activate:
             e.append(base(type="rectangle",id=nid(),x=activate-5,y=y-6,width=10,height=8,
@@ -189,7 +192,7 @@ def sequence():
 # ── 5. ER Diagram (实体关系图) ───────────────────────────────────────────────
 def er_diagram():
     e=[]
-    e+=[text(300,15,"订单系统 ER 图 (Crow's Foot Notation)",22)]
+    e += text(300,15,"订单系统 ER 图 (Crow's Foot Notation)",22)
     # ── Entities ──
     # Stacked: entity name box + attributes below
     # 1. 用户
@@ -240,7 +243,7 @@ def er_diagram():
 # ── 6. State Machine (状态机) ────────────────────────────────────────────────
 def state_machine():
     e=[]
-    e+=[text(40,20,"订单状态机",24)]
+    e += text(40,20,"订单状态机",24)
     # UML state machine: states are rounded rectangles, not ellipses
     e+=box(60,80,120,50,"待支付",C_YELLOW)
     e+=box(280,80,120,50,"已支付",C_BLUE)
@@ -257,7 +260,7 @@ def state_machine():
 # ── 7. Mindmap (思维导图) ────────────────────────────────────────────────────
 def mindmap():
     e=[]
-    e+=[text(280,20,"产品规划思维导图",24)]
+    e += text(280,20,"产品规划思维导图",24)
     e+=ellipse(330,100,140,60,"核心产品",C_PURPLE)
     branches=[("用户增长",60,200,C_BLUE),("商业化",300,200,C_GREEN),
               ("技术架构",560,200,C_YELLOW),("运营策略",300,320,C_RED)]
@@ -275,7 +278,7 @@ def mindmap():
 # ── 8. Network Topology (网络拓扑) ───────────────────────────────────────────
 def topology():
     e=[]
-    e+=[text(40,20,"网络拓扑图",24)]
+    e += text(40,20,"网络拓扑图",24)
     e+=ellipse(340,60,120,50,"Internet",C_BLUE)
     e+=box(330,150,140,50,"防火墙",C_RED)
     e+=box(330,230,140,50,"路由器",C_YELLOW)
@@ -295,7 +298,7 @@ def topology():
 # ── 9. User Journey (用户旅程图) ────────────────────────────────────────────
 def journey():
     e=[]
-    e+=[text(280,20,"新用户注册旅程图",24)]
+    e += text(280,20,"新用户注册旅程图",24)
     # Standard journey map: stages → touchpoints → emotions → pain points → opportunities
     stages=[("得知",80,C_BLUE),("注册",280,C_BLUE),("首次使用",480,C_BLUE),
             ("遇到问题",680,C_YELLOW),("解决后",880,C_GREEN)]
@@ -334,7 +337,7 @@ def journey():
 # ── 10. Component Diagram (组件关系图) ──────────────────────────────────────
 def component():
     e=[]
-    e+=[text(280,20,"系统组件关系图",24)]
+    e += text(280,20,"系统组件关系图",24)
     e+=box(300,60,200,50,"前端应用\n(Frontend)",C_BLUE,16)
     e+=box(300,150,200,50,"API Gateway",C_YELLOW)
     e+=region(60,230,260,200,"核心服务")
