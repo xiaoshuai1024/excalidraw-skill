@@ -21,50 +21,50 @@
     // race that the __moduleReady-flag approach has (a flag set by the module
     // script running does not mean the import() inside it has finished).
     //
-    // Version is pinned. The `?bundle` query is REQUIRED: without it, esm.sh
-    // serves Excalidraw as dozens of cascading module requests (react,
-    // radix-ui, ...) and the total load time blows past any reasonable
-    // timeout. Bundling collapses it into one fetch.
+    // Version is pinned. A bundled single-file URL is REQUIRED: without it,
+    // CDNs serve Excalidraw as dozens of cascading module requests (react,
+    // radix-ui, ...) and the total load time blows past any timeout.
+    //
+    // Multi-CDN fallback: try each in order until one loads. esm.sh is primary
+    // (most reliable bundling); jsdelivr and skypack are fallbacks for when a
+    // CDN is down or blocked.
     const EXCAL_VERSION = "0.18.0";
+    const CDN_URLS = [
+      `https://cdn.jsdelivr.net/npm/@excalidraw/excalidraw@${EXCAL_VERSION}/+esm`,
+      `https://esm.sh/@excalidraw/excalidraw@${EXCAL_VERSION}?bundle`,
+      `https://cdn.skypack.dev/@excalidraw/excalidraw@${EXCAL_VERSION}`,
+    ];
 
-    window.__excalReady = import(`https://esm.sh/@excalidraw/excalidraw@${EXCAL_VERSION}?bundle`)
-      .then((mod) => {
-        if (typeof mod.exportToSvg !== "function") {
-          throw new Error(
-            "Loaded Excalidraw module has no exportToSvg. " +
-            "The package layout may have changed; check the pinned version."
-          );
+    async function tryLoadCDNs() {
+      let lastErr;
+      for (const url of CDN_URLS) {
+        try {
+          const mod = await import(url);
+          if (typeof mod.exportToSvg === "function") return mod;
+          throw new Error("module loaded but has no exportToSvg");
+        } catch (e) {
+          lastErr = e;
         }
+      }
+      throw lastErr;
+    }
+
+    window.__excalReady = tryLoadCDNs()
+      .then((mod) => {
         window.__excal = mod;
-        // Plain boolean the driver can poll with wait_for_function (which does
-        // not support `await`). Set ONLY after the module is fully usable.
         window.__excalDone = true;
       })
       .catch((err) => {
-        // Surface the failure so the driver can read it instead of timing out.
         window.__excalError = String(err && err.message ? err.message : err);
         window.__excalDone = true;
       });
 
     /**
      * Render an Excalidraw scene to an <svg> element appended to #root.
-     *
-     * Uses TWO-PASS rendering to solve text centering, which is otherwise
-     * unsolvable in a headless environment:
-     *
-     * The Excalidraw hand-drawn font "Virgil" is NOT available in the bare
-     * page (Chromium falls back to serif, which has completely different
-     * metrics). Excalidraw embeds Virgil as @font-face INSIDE exported SVGs,
-     * but only at export time. So any text measurement done before export is
-     * wrong, and exportToSvg trusts the stored text x/y/width/height as-is —
-     * leading to off-center labels.
-     *
-     * PASS 1 (probe): export once. Extract the @font-face from the result,
-     * inject it into the page, and load the font. Now the page really has Virgil.
-     *
-     * PASS 2 (measure + re-export): measure every bound text label's real
-     * pixel width via getBoundingClientRect using the now-loaded Virgil, write
-     * back exactly-centered x/y/width/height, then export again.
+     * Simple pipeline: restore → convertToExcalidrawElements → exportToSvg.
+     * No coordinate fixes needed — scene JSON must set text.x/text.y to
+     * the CENTER of the container (textAlign="center"/verticalAlign="middle"
+     * means x/y are the anchor points for the text).
      */
     window.renderDiagram = async function (scene) {
       try {
@@ -78,27 +78,6 @@
           normalized = { elements: scene.elements, appState: scene.appState, files: scene.files };
         }
 
-        // Capture bound-text → container box centers BEFORE convert (ids valid).
-        // Used to re-center labels in the exported SVG.
-        const boundBoxes = [];
-        {
-          const byIdPre = new Map(normalized.elements.map((e) => [e.id, e]));
-          for (const t of normalized.elements) {
-            if (t.type !== "text" || !t.containerId) continue;
-            const box = byIdPre.get(t.containerId);
-            if (!box) continue;
-            boundBoxes.push({
-              cx: box.x + box.width / 2,
-              cy: box.y + box.height / 2,
-              fs: t.fontSize || 18,
-              lh: t.lineHeight || 1.25,
-            });
-          }
-        }
-
-        // convertToExcalidrawElements re-validates elements and recomputes text
-        // metrics; without it, hand-authored text with stale/missing fields is
-        // silently dropped by exportToSvg.
         if (typeof excal.convertToExcalidrawElements === "function") {
           try {
             normalized.elements = excal.convertToExcalidrawElements(normalized.elements);
@@ -109,43 +88,11 @@
           { exportBackground: true, exportWithDarkMode: false, viewBackgroundColor: "#ffffff" },
           normalized.appState || {}
         );
-        const exportOpts = {
+        const svg = await excal.exportToSvg({
           elements: normalized.elements,
           appState: appState,
           files: normalized.files || {},
-        };
-
-        // ---- PASS 1: probe export to obtain the embedded Virgil @font-face ----
-        // Excalidraw ships the Virgil font ONLY inside exported SVGs. In the
-        // bare page it is unavailable, so any width measurement falls back to
-        // serif (wrong metrics). We export once, rip the @font-face out, inject
-        // it into the page, and load it — so the page now really has Virgil.
-        const probeSvg = await excal.exportToSvg(exportOpts);
-        const probeStr = new XMLSerializer().serializeToString(probeSvg);
-        const fontFaceMatches = probeStr.match(/@font-face\s*\{[^}]+\}/g) || [];
-        if (fontFaceMatches.length) {
-          const style = document.createElement("style");
-          style.textContent = fontFaceMatches.join("\n");
-          document.head.appendChild(style);
-          try {
-            await document.fonts.load("1px Virgil");
-            await document.fonts.ready;
-          } catch (e) {}
-        }
-
-        // ---- PASS 2: final export, then fix text centering on the SVG DOM ----
-        // exportToSvg computes text x/y itself and IGNORES any coordinates we
-        // set on the scene elements. It computes them with an internal font
-        // width estimate that does NOT match real Virgil, so bound labels end
-        // up off-center. We fix it on the SVG DOM AFTER export.
-        //
-        // Rather than reverse-engineer which SVG <path>/<rect> a text belongs
-        // to (getBBox on hand-drawn paths is inflated by the stroke width, so
-        // "smallest enclosing shape" is still ~10px off), we compute the EXACT
-        // intended position from the scene JSON and the export's coordinate
-        // offset. Excalidraw translates everything so the min coordinate is 0;
-        // we compute that offset from the background <rect> width vs scene.
-        const svg = await excal.exportToSvg(exportOpts);
+        });
 
         if (!svg || svg.tagName.toLowerCase() !== "svg") {
           throw new Error(
@@ -154,70 +101,9 @@
           );
         }
 
-        // Temporarily attach the SVG to the document so getBBox works.
         const root = document.getElementById("root");
         root.innerHTML = "";
         root.appendChild(svg);
-
-        // Compute the scene→SVG coordinate offset. Excalidraw centers elements
-        // in the canvas with symmetric padding. We derive padX/padY from:
-        //   padX = (canvasWidth - sceneWidth) / 2
-        const bgRect = svg.querySelector("rect");
-        const canvasW = bgRect ? parseFloat(bgRect.getAttribute("width") || "0") : 0;
-        const canvasH = bgRect ? parseFloat(bgRect.getAttribute("height") || "0") : 0;
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const e of normalized.elements) {
-          if (typeof e.x !== "number") continue;
-          const ew = typeof e.width === "number" ? Math.abs(e.width) : 0;
-          const eh = typeof e.height === "number" ? Math.abs(e.height) : 0;
-          minX = Math.min(minX, e.x);
-          minY = Math.min(minY, e.y);
-          maxX = Math.max(maxX, e.x + ew);
-          maxY = Math.max(maxY, e.y + eh);
-        }
-        if (!isFinite(minX)) { minX = 0; maxX = 0; minY = 0; maxY = 0; }
-        const sceneW = maxX - minX;
-        const sceneH = maxY - minY;
-        const padX = (canvasW - sceneW) / 2;
-        const padY = (canvasH - sceneH) / 2;
-
-        // Re-center every bound label HORIZONTALLY by finding its container
-        // shape in the SVG and setting x to that shape's horizontal center.
-        //
-        // Why this works for x even with hand-drawn paths: rough.js strokes
-        // extend outward symmetrically on both sides, so a path's getBBox().x
-        // center equals the true box center (the inflation cancels out
-        // horizontally). Vertical centering is left to Excalidraw's default
-        // (verticalAlign middle is close enough; only horizontal was badly off).
-        //
-        // For each <text> with text-anchor=middle, find the SMALLEST shape
-        // (rect/path/ellipse/diamond) whose bbox horizontally contains the
-        // text's current x — that's its container. Set x to that shape's center.
-        const shapes = [];
-        for (const node of svg.querySelectorAll("rect, path, ellipse, polygon")) {
-          try {
-            const bb = node.getBBox();
-            if (bb.width > 30 && bb.height > 15) {
-              shapes.push({ x: bb.x, y: bb.y, w: bb.width, h: bb.height, cx: bb.x + bb.width / 2, area: bb.width * bb.height });
-            }
-          } catch (e) {}
-        }
-        for (const textEl of svg.querySelectorAll("text")) {
-          if (textEl.getAttribute("text-anchor") !== "middle") continue;
-          const tx = parseFloat(textEl.getAttribute("x") || "0");
-          // Find smallest shape whose horizontal range contains tx
-          let best = null;
-          for (const s of shapes) {
-            if (tx >= s.x - 2 && tx <= s.x + s.w + 2) {
-              if (!best || s.area < best.area) best = s;
-            }
-          }
-          if (best) {
-            textEl.setAttribute("x", best.cx);
-          }
-        }
-
         window.__lastSvg = new XMLSerializer().serializeToString(svg);
 
         return { success: true, width: svg.getAttribute("width"), height: svg.getAttribute("height") };

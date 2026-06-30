@@ -24,7 +24,10 @@ def base(**kw):
 def box(x,y,w,h,label,fill,fs=18,dashed=False,stroke="#1e1e1e"):
     b = base(type="rectangle",id=nid(),x=x,y=y,width=w,height=h,backgroundColor=fill,
              strokeColor=stroke,roundness={"type":3},strokeStyle="dashed" if dashed else "solid")
-    t = base(type="text",id=nid(),x=x,y=y,width=80,height=24,fontSize=fs,fontFamily=1,
+    # textAlign="center" means text.x/y are the CENTER anchor of the text.
+    # Set them to the box center so the label renders centered in the box.
+    cx, cy = x + w/2, y + h/2
+    t = base(type="text",id=nid(),x=cx,y=cy,width=80,height=24,fontSize=fs,fontFamily=1,
              textAlign="center",verticalAlign="middle",containerId=b["id"],
              text=label,originalText=label,lineHeight=1.25)
     b["boundElements"]=[{"id":t["id"],"type":"text"}]
@@ -32,7 +35,8 @@ def box(x,y,w,h,label,fill,fs=18,dashed=False,stroke="#1e1e1e"):
 
 def ellipse(x,y,w,h,label,fill,fs=18):
     e = base(type="ellipse",id=nid(),x=x,y=y,width=w,height=h,backgroundColor=fill)
-    t = base(type="text",id=nid(),x=x,y=y,width=80,height=24,fontSize=fs,fontFamily=1,
+    cx, cy = x + w/2, y + h/2
+    t = base(type="text",id=nid(),x=cx,y=cy,width=80,height=24,fontSize=fs,fontFamily=1,
              textAlign="center",verticalAlign="middle",containerId=e["id"],
              text=label,originalText=label,lineHeight=1.25)
     e["boundElements"]=[{"id":t["id"],"type":"text"}]
@@ -40,7 +44,8 @@ def ellipse(x,y,w,h,label,fill,fs=18):
 
 def diamond(x,y,w,h,label,fill,fs=18):
     d = base(type="diamond",id=nid(),x=x,y=y,width=w,height=h,backgroundColor=fill)
-    t = base(type="text",id=nid(),x=x,y=y,width=60,height=24,fontSize=fs,fontFamily=1,
+    cx, cy = x + w/2, y + h/2
+    t = base(type="text",id=nid(),x=cx,y=cy,width=60,height=24,fontSize=fs,fontFamily=1,
              textAlign="center",verticalAlign="middle",containerId=d["id"],
              text=label,originalText=label,lineHeight=1.25)
     d["boundElements"]=[{"id":t["id"],"type":"text"}]
@@ -52,8 +57,9 @@ def arrow(x1,y1,x2,y2,dashed=False,color="#1e1e1e"):
                 startBinding=None,endBinding=None,lastCommittedPoint=None,
                 startArrowhead=None,endArrowhead="arrow",points=[[0,0],[x2-x1,y2-y1]])
 
-def line(x1,y1,x2,y2):
+def line(x1,y1,x2,y2,dashed=False):
     return base(type="line",id=nid(),x=x1,y=y1,width=x2-x1,height=y2-y1,roundness={"type":2},
+                strokeStyle="dashed" if dashed else "solid",
                 lastCommittedPoint=None,points=[[0,0],[x2-x1,y2-y1]])
 
 def text(x,y,s,size=18,color="#1e1e1e"):
@@ -147,50 +153,100 @@ def flowchart():
 # ── 4. Sequence Diagram (时序图) ────────────────────────────────────────────
 def sequence():
     e=[]
-    e+=[text(40,20,"支付时序图",24)]
-    actors=[("用户",60),("API网关",260),("支付服务",460),("银行",660)]
+    e+=[text(400,15,"支付时序图 — MVC + 外部银行",22)]
+    # Participants (矩形框在顶部), lifelines below
+    actors=[("用户\n(User)",80),("API网关\n(Gateway)",280),("支付服务\n(Payment)",500),("银行\n(Bank)",720)]
     for name,x in actors:
-        e+=box(x-50,60,100,40,name,C_BLUE,16)
-        e+=line(x,100,x,560)
-    def msg(y,x1,x2,label,dashed=False):
+        e+=box(x-55,50,110,42,name,C_BLUE,14,stroke="#1971c2")
+        # 虚线生命线 (UML standard)
+        e+=line(x,92,x,600,dashed=True)
+    # Message number counter
+    msg_num = [0]
+    def msg(y,x1,x2,label,dashed=False,activate=None):
+        msg_num[0] += 1
+        lbl = f"{msg_num[0]}: {label}"
         e.append(arrow(x1,y,x2,y,dashed=dashed))
-        mx=(x1+x2)//2-30
-        e.append(text(mx,y-22,label,13))
-    msg(140,60,260,"发起支付"); msg(170,260,460,"创建订单")
-    msg(200,460,660,"扣款请求"); msg(240,660,460,"扣款成功",dashed=True)
-    msg(280,460,260,"支付成功",dashed=True); msg(320,260,60,"返回结果",dashed=True)
-    e+=box(200,580,300,40,"saga事务补偿",C_RED,16)
+        mx = (x1+x2)//2 - 40
+        e.append(text(mx,y-20,lbl,12))
+        # Activation box (thin rectangle on lifeline at message target)
+        if activate:
+            e.append(base(type="rectangle",id=nid(),x=activate-5,y=y-6,width=10,height=8,
+                         backgroundColor="#dee2e6",strokeColor="transparent",fillStyle="solid",
+                         strokeWidth=0,roughness=0,roundness=None))
+    # Messages in chronological order (y increasing):
+    msg(130,80,280,"发起支付请求");                            # user → gateway
+    msg(170,280,500,"验证并创建订单");                           # gateway → payment
+    msg(220,500,720,"发起银行扣款",activate=720);               # payment → bank (sync, wait)
+    msg(280,720,500,"扣款结果: 成功",dashed=True);              # bank → payment (return)
+    msg(340,500,280,"支付确认",dashed=True);                   # payment → gateway (return)
+    msg(400,280,80,"展示支付结果",dashed=True);                # gateway → user (return)
+    # Note
+    e+=box(200,580,400,36,"Saga 补偿事务: 任一环节失败则回滚全部",C_RED,13)
+    # Legend
+    e+=text(40,630,"实线箭头=同步调用  虚线箭头=返回  细矩形=激活框(线程阻塞等待)",11)
     return scene(e)
 
 # ── 5. ER Diagram (实体关系图) ───────────────────────────────────────────────
 def er_diagram():
     e=[]
-    e+=[text(40,20,"订单系统ER图",24)]
-    e+=box(60,70,160,50,"用户 users",C_GREEN)
-    e+=box(60,140,160,30,"id, name, phone",C_GRAY,13)
-    e+=box(340,70,160,50,"订单 orders",C_GREEN)
-    e+=box(340,140,160,30,"id, total, status",C_GRAY,13)
-    e+=box(620,70,160,50,"商品 products",C_GREEN)
-    e+=box(620,140,160,30,"id, name, price",C_GRAY,13)
-    e+=box(340,300,160,50,"订单项 items",C_YELLOW)
-    e+=box(340,370,160,30,"id, qty, price",C_GRAY,13)
-    e+=text(240,80,"1 : N",14)
-    e+=text(520,80,"1 : N",14)
-    e+=text(400,230,"1 : N",14)
-    e+=text(560,310,"N : 1",14)
-    e+=line(220,95,340,95); e+=line(500,95,620,95)
-    e+=line(420,170,420,300); e+=line(500,325,620,160)
+    e+=[text(300,15,"订单系统 ER 图 (Crow's Foot Notation)",22)]
+    # ── Entities ──
+    # Stacked: entity name box + attributes below
+    # 1. 用户
+    e+=box(60,60,160,40,"用户 (users)",C_GREEN,14)
+    e+=box(60,102,160,65,"* id (PK)\nname\nphone\ncreated_at",C_GRAY,11)
+    # 2. 订单
+    e+=box(340,60,160,40,"订单 (orders)",C_GREEN,14)
+    e+=box(340,102,160,65,"* id (PK)\nuser_id (FK)\ntotal\nstatus",C_GRAY,11)
+    # 3. 订单项 (associative entity, resolves M:N)
+    e+=box(340,300,170,40,"订单项 (items)",C_YELLOW,14)
+    e+=box(340,342,170,65,"* id (PK)\norder_id (FK)\nproduct_id (FK)\nqty, price",C_GRAY,11)
+    # 4. 商品
+    e+=box(660,60,160,40,"商品 (products)",C_GREEN,14)
+    e+=box(660,102,160,65,"* id (PK)\nname\nprice\nstock",C_GRAY,11)
+
+    # ── Relationships with Crow's Foot cardinality at line ends ──
+    # user(x=60,w=160,edge=220) → order(x=340,w=160,edge=340): ‖——————○<
+    e+=text(232,65,"‖",16)
+    e+=text(320,65,"○<",16)
+    e+=text(270,55,"places",12)
+    e+=line(220,82,340,82)
+
+    # order(500,82) → product(660,82): ‖<——————○<
+    e+=text(510,65,"‖<",16)
+    e+=text(640,65,"○<",16)
+    e+=text(565,55,"contains",12)
+    e+=line(500,82,660,82)
+
+    # order(420,167) → items(420,300): ‖——————○<
+    e+=text(410,200,"‖",16)
+    e+=text(410,280,"○<",16)
+    e+=text(395,240,"resolves",12)
+    e+=line(420,167,420,300)
+
+    # ── Legend ──
+    e+=text(60,420,"Crow's Foot 基数标记:",13)
+    leg = [
+        "  ||   = 恰好一 (mandatory one)",
+        "  O|   = 零或一 (optional one)",
+        "  |<   = 一到多 (mandatory many)",
+        "  O<   = 零到多 (optional many)",
+        "内圈=最小(min) 外圈=最大(max)",
+    ]
+    for i,line_text in enumerate(leg):
+        e+=text(60,440+i*18,line_text,11)
     return scene(e)
 
 # ── 6. State Machine (状态机) ────────────────────────────────────────────────
 def state_machine():
     e=[]
     e+=[text(40,20,"订单状态机",24)]
-    e+=ellipse(60,80,120,50,"待支付",C_YELLOW)
-    e+=ellipse(280,80,120,50,"已支付",C_BLUE)
-    e+=ellipse(500,80,120,50,"已发货",C_GREEN)
-    e+=ellipse(500,200,120,50,"已完成",C_GREEN)
-    e+=ellipse(280,200,120,50,"已取消",C_RED)
+    # UML state machine: states are rounded rectangles, not ellipses
+    e+=box(60,80,120,50,"待支付",C_YELLOW)
+    e+=box(280,80,120,50,"已支付",C_BLUE)
+    e+=box(500,80,120,50,"已发货",C_GREEN)
+    e+=box(500,200,120,50,"已完成",C_GREEN)
+    e+=box(280,200,120,50,"已取消",C_RED)
     e+=arrow(180,105,280,105); e+=text(210,85,"支付",13)
     e+=arrow(400,105,500,105); e+=text(430,85,"发货",13)
     e+=arrow(560,130,560,200); e+=text(575,160,"签收",13)
@@ -239,21 +295,40 @@ def topology():
 # ── 9. User Journey (用户旅程图) ────────────────────────────────────────────
 def journey():
     e=[]
-    e+=[text(280,20,"购物用户旅程图",24)]
-    stages=[("发现",80,C_GREEN),("浏览",240,C_BLUE),("决策",400,C_YELLOW),
-            ("购买",560,C_GREEN),("收货",720,C_BLUE),("复购",880,C_GREEN)]
+    e+=[text(280,20,"新用户注册旅程图",24)]
+    # Standard journey map: stages → touchpoints → emotions → pain points → opportunities
+    stages=[("得知",80,C_BLUE),("注册",280,C_BLUE),("首次使用",480,C_BLUE),
+            ("遇到问题",680,C_YELLOW),("解决后",880,C_GREEN)]
     for i,(name,x,c) in enumerate(stages):
-        e+=box(x,80,120,40,name,c,16)
-        e+=text(x+10,140,f"触点:{name}",13)
-        e+=text(x+10,170,"评分:",13)
+        e+=box(x,60,120,36,name,c,15)
+    # Row 1: touchpoints
+    e+=text(40,120,"触点:",14)
+    contacts=["广告/朋友","落地页","产品首页","客服/帮助","产品"]
+    for i,(name,x,c) in enumerate(stages):
+        e+=text(x+10,140,contacts[i],12)
+    # Row 2: emotions (1-5 scale)
+    e+=text(40,175,"情绪:",14)
+    scores=[3,3,4,2,5]  # neutral→neutral→happy→frustrated→delighted
+    for i,(name,x,c) in enumerate(stages):
         for star in range(5):
-            fill = C_YELLOW if star < (4-i%2) else C_GRAY
-            e+=ellipse(x+10+star*22,200,18,18,"",fill,1)
-    e+=text(40,250,"情绪曲线:",16)
-    pts_y=[280,260,270,240,250,230]
+            fill = C_YELLOW if star < scores[i] else C_GRAY
+            e+=ellipse(x+8+star*22,195,18,18,"",fill,1)
+    # Emotion curve connecting star rows
+    pts_y=[210 for _ in stages]
     for i in range(len(stages)-1):
-        x1=stages[i][1]+60; x2=stages[i+1][1]+60
+        x1=stages[i][1]+55+max(0,scores[i]-1)*11
+        x2=stages[i+1][1]+55+max(0,scores[i+1]-1)*11
         e+=line(x1,pts_y[i],x2,pts_y[i+1])
+    # Row 3: pain points
+    e+=text(40,250,"痛点:",14)
+    pains=["不知好坏","表单太长","不知怎么开始","等待回复",""]
+    for i,(name,x,c) in enumerate(stages):
+        if pains[i]: e+=text(x+10,270,pains[i],11)
+    # Row 4: opportunities
+    e+=text(40,310,"机会:",14)
+    opps=["案例展示","社交登录","引导教程","AI秒回","激励分享"]
+    for i,(name,x,c) in enumerate(stages):
+        e+=text(x+10,330,opps[i],11)
     return scene(e)
 
 # ── 10. Component Diagram (组件关系图) ──────────────────────────────────────
