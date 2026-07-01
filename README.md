@@ -11,7 +11,7 @@ Every diagram type is rendered with the real Excalidraw engine — hand-drawn ae
 
 ![demo](assets/diagram.png)
 
-**64 diagram types, 26 working examples.** The skill knows the professional notation for all of them:
+**64 diagram types, 35 working examples.** The skill knows the professional notation for all of them:
 
 | Category | Types | Examples |
 |---|---|---|
@@ -97,7 +97,7 @@ Not a reimplementation — this is the real Excalidraw engine (rough.js, Virgil 
 
 ## Examples
 
-Generated examples under `examples/output/` (10 diagrams) and `examples/all/` (16 diagrams), each with `.excalidraw` source + `.svg` + `.png`.
+Generated examples under `examples/output/` (10 + 25 diagrams), each with `.excalidraw` source + `.svg` + `.png`.
 
 | File | Type |
 |---|---|
@@ -127,6 +127,15 @@ Generated examples under `examples/output/` (10 diagrams) and `examples/all/` (1
 | `examples/all/58-kano-model.excalidraw` | Kano model |
 | `examples/all/60-business-model-canvas.excalidraw` | Business Model Canvas |
 | `examples/all/63-stride-threat-model.excalidraw` | STRIDE threat model |
+| `examples/all/65-fishbone.excalidraw` | Ishikawa fishbone (root-cause) |
+| `examples/all/66-swimlane.excalidraw` | Swimlane (cross-functional) flowchart |
+| `examples/all/67-user-story-map.excalidraw` | User story map |
+| `examples/all/68-empathy-map.excalidraw` | Empathy map |
+| `examples/all/69-decision-tree.excalidraw` | Decision tree |
+| `examples/all/70-burndown.excalidraw` | Sprint burndown chart |
+| `examples/all/71-org-chart.excalidraw` | Organization chart |
+| `examples/all/72-class-diagram.excalidraw` | UML class diagram |
+| `examples/all/73-data-flow-diagram.excalidraw` | Data flow diagram (DFD) |
 
 ## Repo structure
 
@@ -146,7 +155,7 @@ examples/                    # demo diagrams + generators + rendered output
   gen-all-diagrams.py        # generates 16 more
   diagrams/                  # scene JSONs (10)
   all/                       # scene JSONs (16)
-  output/                    # rendered .svg + .png (26 diagrams)
+  output/                    # rendered .svg + .png (35 diagrams)
 test/                        # integration tests
   render.test.mjs            # 11 integration tests (run: node test/render.test.mjs)
   check.mjs                  # post-render quality / regression checks

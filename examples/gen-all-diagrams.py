@@ -451,6 +451,261 @@ def threat_model():
     return scene(e)
 add("63-stride-threat-model", threat_model)
 
+# ═══ 65. Fishbone / Ishikawa (鱼骨图) ═══
+def fishbone():
+    e=[]
+    e+=text(300,15,"线上故障排查 — 鱼骨图 (Ishikawa)",22)
+    # Spine: horizontal arrow ending at the "problem" head on the right.
+    SPINE_Y=250
+    e+=arrow(80,SPINE_Y,720,SPINE_Y)
+    e+=box(740,SPINE_Y-30,120,60,"故障:下单502",C_RED,12)
+    # 6Ms categories. Diagonal bones pointing INTO the spine.
+    cats=[("人 (People)",      180,  UP :=True ,C_BLUE,
+           ["值班不熟悉回滚","人手不足"]),
+          ("方法 (Method)",    180,  False    ,C_GREEN,
+           ["无灰度发布","监控阈值过宽"]),
+          ("机器 (Machine)",   340,  True     ,C_YELLOW,
+           ["CPU 打满","磁盘写满"]),
+          ("物料 (Material)",  340,  False    ,C_PURPLE,
+           ["依赖三方超时","配置错误"]),
+          ("测量 (Measure)",   520,  True     ,C_ORANGE,
+           ["告警延迟5min","日志不全"]),
+          ("环境 (Environment)",520, False    ,C_PINK,
+           ["机房网络抖动","DNS 污染"])]
+    for name,x,up,color,causes in cats:
+        # bone start (away from spine) and end (on spine)
+        by = SPINE_Y-130 if up else SPINE_Y+130
+        e+=polyline([(x,by),(x+90,SPINE_Y)],color="#495057")
+        e+=box(x-50,by-22,130,30,name,color,11)
+        # sub-cause small branches off the diagonal bone
+        for i,ca in enumerate(causes):
+            cy = by + (40 if up else -40) + i*(26 if up else -26)
+            e+=line(x+30,by+ (60 if up else -60), x+30+ (50 if i==0 else 70), cy, color="#868e96")
+            e+=text(x+40+ (50 if i==0 else 70), cy-7, ca, 9)
+    return scene(e)
+add("65-fishbone", fishbone)
+
+# ═══ 66. Swimlane Flowchart (泳道流程图) ═══
+def swimlane():
+    e=[]
+    e+=text(280,15,"退款流程 — 跨职能泳道图",22)
+    lanes=[("用户",60,C_BLUE),("客服",230,C_YELLOW),("财务",400,C_GREEN),("系统",570,C_PURPLE)]
+    # Swimlane backgrounds
+    for name,x,color in lanes:
+        e+=box(x,55,160,360,"",color,1)
+        e+=text(x+8,60,name,13)
+    # Steps: (lane_x_center, y, label)
+    Y0=110
+    steps=[(140,Y0,"申请退款",C_BLUE),
+           (310,Y0+50,"审核凭证",C_YELLOW),
+           (480,Y0+100,"校验金额",C_GREEN),
+           (650,Y0+150,"冻结订单",C_PURPLE),
+           (650,Y0+230,"原路退回",C_PURPLE),
+           (480,Y0+280,"更新账务",C_GREEN),
+           (140,Y0+330,"收到退款",C_BLUE)]
+    boxes=[]
+    for cx,y,label,color in steps:
+        # white fill so the step stands out on the colored lane background
+        b=box(cx-55,y,110,34,label,"#ffffff",11)
+        boxes.append((cx,y,b[0]["id"]))
+        e+=b
+    # Connect in order (the process flow)
+    for i in range(len(boxes)-1):
+        cx1,y1,_=boxes[i]; cx2,y2,_=boxes[i+1]
+        e+=arrow(cx1+ (55 if cx2>cx1 else -55), y1+17, cx2+(-55 if cx2<cx1 else 55), y2+17)
+    return scene(e)
+add("66-swimlane", swimlane)
+
+# ═══ 67. User Story Map (用户故事地图) ═══
+def story_map():
+    e=[]
+    e+=text(280,15,"电商 v2.0 — 用户故事地图",22)
+    # Backbone: user activities (epics) across the top
+    e+=text(20,55,"主线活动:",13)
+    backbone=[("浏览",60),("搜索",230),("下单",400),("支付",570),("发货",740)]
+    for name,x in backbone:
+        e+=box(x,75,130,36,name,C_BLUE,13)
+    # Releases (swimlanes)
+    e+=text(20,135,"v1.0 MVP:",13,C_GREEN)
+    e+=text(20,200,"v1.5:",13,C_YELLOW)
+    e+=text(20,265,"v2.0:",13,C_RED)
+    # User stories under each activity, grouped by release row
+    stories={
+        135:[("商品详情",60),("关键词搜",230),("购物车",400),("余额支付",570),("自提",740)],
+        200:[("推荐流",60),("筛选",230),("优惠券",400),("微信支付",570),("快递",740)],
+        265:[("直播",60),("AI搜",230),("拼团",400),("分期",570),("同城达",740)],
+    }
+    for y,items in stories.items():
+        for name,x in items:
+            e+=box(x,y,130,30,name,C_GRAY if y==135 else (C_YELLOW if y==200 else C_RED),10)
+    # release priority axis (downward = later)
+    e+=arrow(20,320,880,320)
+    e+=text(840,330,"时间 / 优先级 →",11)
+    return scene(e)
+add("67-user-story-map", story_map)
+
+# ═══ 68. Empathy Map (同理心地图) ═══
+def empathy_map():
+    e=[]
+    e+=text(280,15,"目标用户同理心地图 (Empathy Map)",22)
+    # 2x2 quadrants + center user
+    e+=box(60,60,360,150,"想 (Think)\n「这能解决我的问题吗」\n「会不会很复杂」",C_BLUE,12)
+    e+=box(440,60,360,150,"感 (Feel)\n期待 + 焦虑\n怕学不会、怕踩坑",C_YELLOW,12)
+    e+=box(60,230,360,150,"说 (Say)\n「先收藏一下」\n「有没有教程」",C_GREEN,12)
+    e+=box(440,230,360,150,"做 (Do)\n对比3个竞品\n看评论再决定",C_PURPLE,12)
+    # center user circle
+    e+=ellipse(370,180,120,80,"用户",C_PINK,16)
+    # pains / gains footer
+    e+=box(60,400,360,50,"痛点 Pains: 时间紧、选择多、怕被坑",C_RED,11)
+    e+=box(440,400,360,50,"收益 Gains: 省时、靠谱、有成就感",C_GREEN,11)
+    return scene(e)
+add("68-empathy-map", empathy_map)
+
+# ═══ 69. Decision Tree (决策树) ═══
+def decision_tree():
+    e=[]
+    e+=text(300,15,"事件处理 — 决策树",22)
+    # root question
+    e+=diamond(380,60,140,50,"是否影响\n核心交易?",C_YELLOW,12)
+    # Yes branch (left) -> severity
+    e+=arrow(420,110,300,150); e+=text(310,125,"是",11,C_RED)
+    e+=diamond(180,150,160,50,"影响范围\n>10% 用户?",C_RED,12)
+    e+=arrow(220,200,140,250); e+=text(150,220,"是",11,C_RED)
+    e+=box(60,250,120,40,"P0 立即回滚",C_RED,11)
+    e+=arrow(320,200,420,250); e+=text(330,220,"否",11)
+    e+=box(360,250,120,40,"P1 限流修复",C_ORANGE,11)
+    # No branch (right) -> routine
+    e+=arrow(480,110,620,150); e+=text(540,125,"否",11)
+    e+=diamond(560,150,160,50,"可复现?",C_BLUE,12)
+    e+=arrow(600,200,540,250); e+=text(545,220,"是",11)
+    e+=box(480,250,120,40,"P2 提工单",C_YELLOW,11)
+    e+=arrow(700,200,780,250); e+=text(720,220,"否",11)
+    e+=box(720,250,120,40,"观察监控",C_GREEN,11)
+    e+=text(60,330,"决策: P0=立即回滚 | P1=限流修复 | P2=提工单 | 其他=观察",11)
+    return scene(e)
+add("69-decision-tree", decision_tree)
+
+# ═══ 70. Burndown Chart (燃尽图) ═══
+def burndown():
+    e=[]
+    e+=text(300,15,"Sprint 燃尽图 (Burndown)",22)
+    # Axes
+    e+=arrow(80,80,80,380)                      # Y axis
+    e+=arrow(80,380,720,380)                    # X axis
+    e+=text(40,80,"剩余\n故事点",11)
+    e+=text(700,390,"天数 →",11)
+    # Y tick labels
+    for i,v in enumerate([120,90,60,30,0]):
+        y=380-i*60
+        e+=line(76,y,84,y); e+=text(48,y-6,str(v),10)
+    # X tick labels (days)
+    for i,d in enumerate(range(11)):
+        x=80+i*60
+        e+=line(x,376,x,384); e+=text(x-6,390,f"D{d}",9)
+    # Ideal line (linear 120->0)
+    ideal=[(80,80),(720,380)]
+    e+=polyline(ideal,dashed=True,color="#868e96")
+    e+=text(360,250,"理想线 (虚线)",9,"#868e96")
+    # Actual line (zigzag, ends above 0 = not all done)
+    actual=[(80,80),(140,95),(200,110),(260,130),(320,150),(380,160),
+            (440,170),(500,185),(560,200),(620,215),(680,230)]
+    e+=polyline(actual,color=C_BLUE)
+    e+=text(560,215,"实际剩余",9,C_BLUE)
+    # Legend
+    e+=box(480,80,220,40,"蓝实线=实际剩余\n灰虚线=理想进度",C_GRAY,9)
+    return scene(e)
+add("70-burndown", burndown)
+
+# ═══ 71. Org Chart (组织架构图) ═══
+def org_chart():
+    e=[]
+    e+=text(320,15,"研发团队组织架构图",22)
+    # CEO/CTO top
+    e+=box(370,60,140,40,"CTO",C_PURPLE,14)
+    # Layer 2: 3 leads
+    leads=[("前端负责人",120,C_BLUE),("后端负责人",370,C_GREEN),("测试负责人",620,C_YELLOW)]
+    for name,x,color in leads:
+        e+=box(x,150,140,40,name,color,12)
+        e+=line(440,100,x+70,150)   # CTO -> lead
+    # Layer 3: members under each lead
+    members={
+        120:[("小程序",C_BLUE),("商家端",C_BLUE)],
+        370:[("订单",C_GREEN),("支付",C_GREEN),("基础架构",C_GREEN)],
+        620:[("功能测试",C_YELLOW),("自动化",C_YELLOW)],
+    }
+    for lx,items in members.items():
+        n=len(items)
+        for i,(name,color) in enumerate(items):
+            x=lx + (i-(n-1)/2)*80 - 40
+            y=240
+            e+=box(x,y,80,36,name,color,10)
+            e+=line(lx+70,190,x+40,240)   # lead -> member
+    e+=text(60,330,"实线=直接汇报关系",10)
+    return scene(e)
+add("71-org-chart", org_chart)
+
+# ═══ 72. UML Class Diagram (类图) ═══
+def class_diagram():
+    e=[]
+    e+=text(320,15,"领域模型 — UML 类图",22)
+    # Class boxes: name | attributes | methods (3 stacked compartments)
+    def classbox(x,y,name,attrs,methods,color):
+        e.extend(box(x,y,160,28,name,color,13))
+        ay=y+30
+        e.extend(box(x,ay,160,len(attrs)*16+8,"",color,1))
+        for i,a in enumerate(attrs):
+            e.extend(text(x+8,ay+4+i*16,a,10))
+        my=ay+len(attrs)*16+10
+        e.extend(box(x,my,160,len(methods)*16+8,"",color,1))
+        for i,m in enumerate(methods):
+            e.extend(text(x+8,my+4+i*16,m,10))
+        return (x,y,x+160,my+len(methods)*16+8)  # bbox
+    # 3 classes
+    o=classbox(60,70,"Order",["-id: Long","-userId: Long","-total: Money","-status: Enum"],
+               ["+pay(): void","+cancel(): void"],C_BLUE)
+    u=classbox(340,70,"User",["-id: Long","-name: String","-phone: String"],
+               ["+login(): Token"],C_GREEN)
+    i=classbox(60,260,"OrderItem",["-id: Long","-productId: Long","-qty: Int","-price: Money"],
+               ["+subtotal(): Money"],C_YELLOW)
+    # Relationships (UML): Order o-- User (association), Order *-- OrderItem (composition)
+    # Order right edge -> User left edge (association, simple line)
+    e+=arrow(o[2],90,u[0],90)
+    e+=text(240,80,"places",10)
+    # Order bottom -> OrderItem top (composition = filled diamond at parent)
+    e+=line(140,o[3],140,i[1])
+    e+=diamond(125,o[3]-6,30,24,"",C_GRAY,1)  # composition diamond on parent end
+    e+=text(150,(o[3]+i[1])//2,"1..*",10)
+    e+=text(60,400,"UML: 实心菱形=组合(composition)  普通箭头=关联(association)",10)
+    return scene(e)
+add("72-class-diagram", class_diagram)
+
+# ═══ 73. Data Flow Diagram / DFD (数据流图) ═══
+def dfd():
+    e=[]
+    e+=text(320,15,"订单系统 — 数据流图 (DFD, Level-1)",22)
+    # External entities (rectangles), processes (rounded/circle), data stores (open rect)
+    # Entities
+    e+=box(40,180,110,50,"用户\n(外部实体)",C_BLUE,11)
+    e+=box(680,180,110,50,"支付网关\n(外部实体)",C_RED,11)
+    # Processes (circles, numbered)
+    e+=ellipse(240,120,110,50,"1.创建订单",C_GREEN,11)
+    e+=ellipse(240,260,110,50,"2.处理支付",C_YELLOW,11)
+    e+=ellipse(460,190,110,50,"3.更新库存",C_PURPLE,11)
+    # Data stores (two horizontal lines = open rectangle; emulate with box + line)
+    e+=box(420,330,140,36,"D1 订单库",C_GRAY,10)
+    e+=box(620,330,140,36,"D2 商品库",C_GRAY,10)
+    # Flows (labeled arrows)
+    e+=arrow(150,195,235,150); e+=text(160,170,"下单请求",9)
+    e+=arrow(295,150,295,255); e+=text(300,200,"订单号",9)
+    e+=arrow(295,285,675,200); e+=text(440,235,"支付请求",9)
+    e+=arrow(675,210,295,290,dashed=True); e+=text(440,275,"支付结果",9)
+    e+=arrow(350,140,420,195); e+=text(370,160,"写入",9)
+    e+=arrow(490,210,490,330); e+=text(500,270,"扣减",9)
+    e+=arrow(570,330,560,215); e+=text(575,275,"读库存",9)
+    e+=text(40,400,"DFD: 圆=处理过程  方框=外部实体  开放矩形=数据存储  箭头=数据流",10)
+    return scene(e)
+add("73-data-flow-diagram", dfd)
+
 # ═══ Generate all ═══
 if __name__=="__main__":
     out_dir=sys.argv[1] if len(sys.argv)>1 else "examples/all"
