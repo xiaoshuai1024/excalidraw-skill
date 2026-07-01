@@ -76,8 +76,13 @@ def region(x,y,w,h,title,color="#1971c2"):
     return [r] + text(x+14,y+8,title,16,color)
 
 def scene(elements, bg="#ffffff"):
+    # Z-order: Excalidraw renders elements in array order, later = on top.
+    # Put connectors (arrow/line) FIRST so boxes/text are drawn over them —
+    # this prevents arrow endpoints that fall inside a box from covering text.
+    order = {"arrow":0,"line":0,"rectangle":1,"ellipse":1,"diamond":1,"text":2}
+    els = sorted(elements, key=lambda e: order.get(e.get("type"),1))
     return {"type":"excalidraw","version":2,"source":"https://excalidraw.com",
-            "elements":elements,"appState":{"viewBackgroundColor":bg},"files":{}}
+            "elements":els,"appState":{"viewBackgroundColor":bg},"files":{}}
 
 # Color palette
 C_BLUE="#a5d8ff"; C_GREEN="#b2f2bb"; C_YELLOW="#ffec99"; C_RED="#ffc9c9"
@@ -254,7 +259,8 @@ def state_machine():
     e+=arrow(400,105,500,105); e+=text(430,85,"发货",13)
     e+=arrow(560,130,560,200); e+=text(575,160,"签收",13)
     e+=arrow(280,130,280,200); e+=text(295,160,"取消",13)
-    e+=arrow(340,200,500,200); e+=text(400,180,"超时取消",13)
+    # 超时取消: 待支付 → 已取消 (不是 已取消→已完成)
+    e+=arrow(150,130,260,200); e+=text(135,170,"超时取消",11,C_RED)
     return scene(e)
 
 # ── 7. Mindmap (思维导图) ────────────────────────────────────────────────────
@@ -270,9 +276,14 @@ def mindmap():
     subs={"用户增长":[("拉新",20,280),("留存",120,320),("召回",60,360)],
           "商业化":[("订阅",280,280),("广告",420,280),("增值",350,360)],
           "技术架构":[("微服务",540,280),("监控",660,280),("CI/CD",600,360)]}
+    # Parent branch centers (x+70, y+25)
+    pcenters={"用户增长":(130,225),"商业化":(370,225),"技术架构":(630,225)}
     for branch,items in subs.items():
+        px,py=pcenters[branch]
         for sname,sx,sy in items:
             e+=box(sx,sy,90,36,sname,C_GRAY,14)
+            # connect parent center → sub-node top-left area
+            e+=line(px,py,sx+45,sy)
     return scene(e)
 
 # ── 8. Network Topology (网络拓扑) ───────────────────────────────────────────

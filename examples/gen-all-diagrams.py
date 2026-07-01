@@ -78,8 +78,13 @@ def region(x,y,w,h,title,color="#1971c2"):
     return [r]+text(x+14,y+8,title,14,color)
 
 def scene(elements):
+    # Z-order: Excalidraw renders elements in array order, later = on top.
+    # Put connectors (arrow/line) FIRST so boxes/text are drawn over them —
+    # this prevents arrow endpoints that fall inside a box from covering text.
+    order = {"arrow":0,"line":0,"rectangle":1,"ellipse":1,"diamond":1,"text":2}
+    els = sorted(elements, key=lambda e: order.get(e.get("type"),1))
     return {"type":"excalidraw","version":2,"source":"https://excalidraw.com",
-            "elements":elements,"appState":{"viewBackgroundColor":"#ffffff"},"files":{}}
+            "elements":els,"appState":{"viewBackgroundColor":"#ffffff"},"files":{}}
 
 C_BLUE="#a5d8ff"; C_GREEN="#b2f2bb"; C_YELLOW="#ffec99"; C_RED="#ffc9c9"
 C_PURPLE="#eebefa"; C_GRAY="#e9ecef"; C_ORANGE="#ffd8a8"; C_PINK="#ffe3e3"
@@ -353,13 +358,16 @@ def nfr_tree():
     for name,x,y,color in branches:
         e+=box(x-40,y,80,36,name,color,13)
         e+=line(root[0],root[1]+40,x,y)
-    leaves=[("响应<200ms",150,190),("吞吐>1kTPS",250,190),
-            ("SQL注入防护",310,190),("数据加密",410,190),
-            ("99.9% SLA",470,190),("自动故障转移",570,190),
-            ("单元测试>80%",630,190),("模块化架构",730,190),
-            ("水平扩展",790,190),("微服务拆分",890,190)]
-    for name,x,y in leaves:
+    leaves=[("响应<200ms",150,190,"性能"),("吞吐>1kTPS",250,190,"性能"),
+            ("SQL注入防护",310,190,"安全"),("数据加密",410,190,"安全"),
+            ("99.9% SLA",470,190,"可用性"),("自动故障转移",570,190,"可用性"),
+            ("单元测试>80%",630,190,"可维护性"),("模块化架构",730,190,"可维护性"),
+            ("水平扩展",790,190,"可扩展性"),("微服务拆分",890,190,"可扩展性")]
+    bcenter={n:(x,y+18) for n,x,y,c in branches}  # branch bottom-center
+    for name,x,y,parent in leaves:
         e+=box(x-30,y,60,28,name,C_GRAY,10,roundness=None)
+        px,py=bcenter[parent]
+        e+=line(px,py,x,y)   # connect branch → leaf
     return scene(e)
 add("53-nfr-quality-tree", nfr_tree)
 
@@ -371,12 +379,15 @@ def api_flow():
     for s_name,x,color in svcs:
         e+=box(x-50,70,100,45,s_name,color,14)
         e+=line(x,115,x,380,dashed=True)
-    # Calls
-    calls=[(135,110,260,"1. POST /order"),(180,260,460,"2. createOrder()"),
-           (230,460,660,"3. pay()"),(290,660,460,"4. success"),(350,460,260,"5. confirm")]
+    # Calls: (y, x1, x2, label). Lifelines at x=60(客户端),260(GW),460(订单),660(支付).
+    calls=[(130, 60,260,"1. POST /order"),
+           (180,260,460,"2. createOrder()"),
+           (230,460,660,"3. pay()"),
+           (290,660,460,"4. success"),
+           (340,460,260,"5. confirm")]
     for y,x1,x2,label in calls:
         e+=arrow(x1,y,x2,y,dashed="success" in label or "confirm" in label)
-        e+=text((x1+x2)//2-40,y-20,label,10)
+        e+=text((x1+x2)//2-45,y-20,label,10)
     return scene(e)
 add("55-api-service-interaction", api_flow)
 
