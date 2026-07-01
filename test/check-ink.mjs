@@ -12,7 +12,7 @@
  * Run:
  *   node test/check-ink.mjs                 # render-on-the-fly + measure all
  *   node test/check-ink.mjs <dir>           # measure pre-rendered PNGs in <dir>
- *   node test/check-ink.mjs --threshold 4   # override the blank threshold (ink%)
+ *   node test/check-ink.mjs --threshold 5   # override the blank threshold (ink%)
  *
  * Exit code 1 if any diagram is below threshold (fail-fast on the first one,
  * unless NO_FAIL_FAST=1). Rendering is the slow part (~40s/diagram via CDN);
@@ -33,9 +33,13 @@ const SKILL = join(ROOT, "skills", "excalidraw");
 const RENDER = join(SKILL, "scripts", "render.py");
 const PYTHON = process.env.PYTHON || "python3";
 
-// A diagram is "blank" below this ink %. Tuned so genuinely sparse-but-valid
-// diagrams (burndown chart ~5%, kano axes) pass, while broken ones (~2%) fail.
-const DEFAULT_THRESHOLD = 4;
+// A diagram is "blank" below this ink %. Tuned empirically:
+//   - genuinely broken diagrams (e.g. cards filled #ffffff, connectors that
+//     never became elements) sit around 2%.
+//   - valid-but-sparse chart types (kano axes ~4%, burndown ~5%) are the floor
+//     for legitimate diagrams, so 3% separates "blank" from "sparse chart".
+// Raise to 4-5 with --threshold only when investigating a specific sparse type.
+const DEFAULT_THRESHOLD = 3;
 
 // ── minimal dependency-free PNG decoder ─────────────────────────────────────
 // Reads IHDR + all IDAT chunks, inflates, and reverses PNG row filters
