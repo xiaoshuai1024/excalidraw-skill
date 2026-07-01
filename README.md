@@ -11,7 +11,7 @@ Every diagram type is rendered with the real Excalidraw engine — hand-drawn ae
 
 ![demo](assets/diagram.png)
 
-**64 diagram types, 26 working examples.** The skill knows the professional notation for all of them:
+**64 diagram types, 35 working examples.** The skill knows the professional notation for all of them:
 
 | Category | Types | Examples |
 |---|---|---|
@@ -97,36 +97,45 @@ Not a reimplementation — this is the real Excalidraw engine (rough.js, Virgil 
 
 ## Examples
 
-Generated examples under `test/output/` (10 diagrams) and `test/all/output/` (16 diagrams), each with `.excalidraw` source + `.svg` + `.png`.
+Scene sources under `examples/diagrams/` (10) and `examples/all/` (25). Render them to SVG/PNG with `skills/excalidraw/scripts/render.py`; rendered output is not committed (regenerable).
 
 | File | Type |
 |---|---|
-| `test/diagrams/01-business-architecture.excalidraw` | 3-layer business architecture |
-| `test/diagrams/02-deployment-architecture.excalidraw` | K8s deployment topology |
-| `test/diagrams/03-flowchart.excalidraw` | Registration flowchart |
-| `test/diagrams/04-sequence-diagram.excalidraw` | Payment sequence (UML) |
-| `test/diagrams/05-er-diagram.excalidraw` | ER with Crow's Foot |
-| `test/diagrams/06-state-machine.excalidraw` | Order state machine (UML) |
-| `test/diagrams/07-mindmap.excalidraw` | Product planning mindmap |
-| `test/diagrams/08-network-topology.excalidraw` | Network topology |
-| `test/diagrams/09-user-journey.excalidraw` | User journey map |
-| `test/diagrams/10-component-diagram.excalidraw` | Component diagram |
-| `test/all/37-raci-matrix.excalidraw` | RACI matrix |
-| `test/all/38-impact-effort-matrix.excalidraw` | Impact-effort prioritization |
-| `test/all/39-risk-matrix.excalidraw` | Risk matrix |
-| `test/all/40-stakeholder-map.excalidraw` | Stakeholder map |
-| `test/all/41-value-stream-map.excalidraw` | Value stream map |
-| `test/all/42-kanban-board.excalidraw` | Kanban board |
-| `test/all/44-event-storming.excalidraw` | Event Storming (DDD) |
-| `test/all/45-context-map.excalidraw` | Context Map (DDD) |
-| `test/all/48-git-branch-strategy.excalidraw` | Git Flow |
-| `test/all/50-system-landscape.excalidraw` | System landscape |
-| `test/all/51-technology-radar.excalidraw` | Technology radar |
-| `test/all/53-nfr-quality-tree.excalidraw` | NFR quality tree |
-| `test/all/55-api-service-interaction.excalidraw` | API call flow |
-| `test/all/58-kano-model.excalidraw` | Kano model |
-| `test/all/60-business-model-canvas.excalidraw` | Business Model Canvas |
-| `test/all/63-stride-threat-model.excalidraw` | STRIDE threat model |
+| `examples/diagrams/01-business-architecture.excalidraw` | 3-layer business architecture |
+| `examples/diagrams/02-deployment-architecture.excalidraw` | K8s deployment topology |
+| `examples/diagrams/03-flowchart.excalidraw` | Registration flowchart |
+| `examples/diagrams/04-sequence-diagram.excalidraw` | Payment sequence (UML) |
+| `examples/diagrams/05-er-diagram.excalidraw` | ER with Crow's Foot |
+| `examples/diagrams/06-state-machine.excalidraw` | Order state machine (UML) |
+| `examples/diagrams/07-mindmap.excalidraw` | Product planning mindmap |
+| `examples/diagrams/08-network-topology.excalidraw` | Network topology |
+| `examples/diagrams/09-user-journey.excalidraw` | User journey map |
+| `examples/diagrams/10-component-diagram.excalidraw` | Component diagram |
+| `examples/all/37-raci-matrix.excalidraw` | RACI matrix |
+| `examples/all/38-impact-effort-matrix.excalidraw` | Impact-effort prioritization |
+| `examples/all/39-risk-matrix.excalidraw` | Risk matrix |
+| `examples/all/40-stakeholder-map.excalidraw` | Stakeholder map |
+| `examples/all/41-value-stream-map.excalidraw` | Value stream map |
+| `examples/all/42-kanban-board.excalidraw` | Kanban board |
+| `examples/all/44-event-storming.excalidraw` | Event Storming (DDD) |
+| `examples/all/45-context-map.excalidraw` | Context Map (DDD) |
+| `examples/all/48-git-branch-strategy.excalidraw` | Git Flow |
+| `examples/all/50-system-landscape.excalidraw` | System landscape |
+| `examples/all/51-technology-radar.excalidraw` | Technology radar |
+| `examples/all/53-nfr-quality-tree.excalidraw` | NFR quality tree |
+| `examples/all/55-api-service-interaction.excalidraw` | API call flow |
+| `examples/all/58-kano-model.excalidraw` | Kano model |
+| `examples/all/60-business-model-canvas.excalidraw` | Business Model Canvas |
+| `examples/all/63-stride-threat-model.excalidraw` | STRIDE threat model |
+| `examples/all/65-fishbone.excalidraw` | Ishikawa fishbone (root-cause) |
+| `examples/all/66-swimlane.excalidraw` | Swimlane (cross-functional) flowchart |
+| `examples/all/67-user-story-map.excalidraw` | User story map |
+| `examples/all/68-empathy-map.excalidraw` | Empathy map |
+| `examples/all/69-decision-tree.excalidraw` | Decision tree |
+| `examples/all/70-burndown.excalidraw` | Sprint burndown chart |
+| `examples/all/71-org-chart.excalidraw` | Organization chart |
+| `examples/all/72-class-diagram.excalidraw` | UML class diagram |
+| `examples/all/73-data-flow-diagram.excalidraw` | Data flow diagram (DFD) |
 
 ## Repo structure
 
@@ -141,12 +150,17 @@ skills/excalidraw/           # skill body (installed by npx skills add)
     all-diagram-types.md     # 64 diagram types + notation reference
     element-templates.md     # JSON templates per element type
     examples/                # working .excalidraw scenes
-test/                        # generators + output
+examples/                    # demo diagrams + generators
   gen-diagrams.py            # generates 10 diagrams
-  gen-all-diagrams.py        # generates 16 more
-  render.test.mjs            # 11 integration tests
+  gen-all-diagrams.py        # generates 25 more
   diagrams/                  # scene JSONs (10)
-  all/                       # scene JSONs (16)
+  all/                       # scene JSONs (25)
+test/                        # integration tests + post-render checks
+  render.test.mjs            # 11 integration tests (run: node test/render.test.mjs)
+  check.mjs                  # structural regression guard (run: node test/check.mjs <scene> <svg>)
+  check-ink.mjs              # pixel ink-density check, catches blank diagrams
+                             #   node test/check-ink.mjs <dir-of-pngs>
+                             #   node test/check-ink.mjs            # render-on-the-fly
 assets/                      # README demo image
 ```
 

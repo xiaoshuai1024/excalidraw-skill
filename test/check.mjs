@@ -33,6 +33,32 @@ if (tagResidue > 0) {
   process.exit(1);
 }
 
+// ── Connector integrity check (guards the list += dict regression) ──
+// If a generator did `e += arrow(...)` where arrow() returned a dict, Python
+// would silently iterate the dict's KEYS, so the arrow never became a real
+// element and connectors vanished. Detect any leaked non-element garbage.
+const nonElements = scene.elements.filter(
+  (e) => typeof e !== "object" || e === null || Array.isArray(e) || typeof e.type !== "string"
+);
+if (nonElements.length > 0) {
+  console.error(
+    `FAIL: ${nonElements.length} malformed entries in scene.elements ` +
+      `(non-objects, nested lists, or missing type — likely a generator helper ` +
+      `returned the wrong shape; arrow/line/text/region must return flat arrays). ` +
+      `First garbage: ${JSON.stringify(nonElements.slice(0, 3)).slice(0, 200)}`
+  );
+  process.exit(1);
+}
+// Sanity: every arrow/line must carry a points array (real Excalidraw element).
+for (const e of scene.elements) {
+  if (e.type === "arrow" || e.type === "line") {
+    if (!Array.isArray(e.points)) {
+      console.error(`FAIL: ${e.type} id=${e.id} has no points array — malformed connector`);
+      process.exit(1);
+    }
+  }
+}
+
 // Build element lookup
 const els = {};
 for (const e of scene.elements) {
