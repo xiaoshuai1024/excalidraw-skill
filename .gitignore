@@ -2,6 +2,9 @@
 .test-tmp/
 node_modules/
 
+# rendered output (regenerable; render with examples/gen-diagrams.py + render.py)
+examples/output/
+
 # rendered output (regenerable; keep the committed assets/ examples only via force-add)
 *.rendered.svg
 *.rendered.png

@@ -97,7 +97,7 @@ Not a reimplementation — this is the real Excalidraw engine (rough.js, Virgil 
 
 ## Examples
 
-Generated examples under `examples/output/` (10 + 25 diagrams), each with `.excalidraw` source + `.svg` + `.png`.
+Scene sources under `examples/diagrams/` (10) and `examples/all/` (25). Render them to SVG/PNG with `skills/excalidraw/scripts/render.py`; rendered output is not committed (regenerable).
 
 | File | Type |
 |---|---|
@@ -150,15 +150,14 @@ skills/excalidraw/           # skill body (installed by npx skills add)
     all-diagram-types.md     # 64 diagram types + notation reference
     element-templates.md     # JSON templates per element type
     examples/                # working .excalidraw scenes
-examples/                    # demo diagrams + generators + rendered output
+examples/                    # demo diagrams + generators
   gen-diagrams.py            # generates 10 diagrams
-  gen-all-diagrams.py        # generates 16 more
+  gen-all-diagrams.py        # generates 25 more
   diagrams/                  # scene JSONs (10)
-  all/                       # scene JSONs (16)
-  output/                    # rendered .svg + .png (35 diagrams)
-test/                        # integration tests
+  all/                       # scene JSONs (25)
+test/                        # integration tests + post-render checks
   render.test.mjs            # 11 integration tests (run: node test/render.test.mjs)
-  check.mjs                  # post-render quality / regression checks
+  check.mjs                  # regression guard (run: node test/check.mjs <scene> <svg>)
 assets/                      # README demo image
 ```
 
