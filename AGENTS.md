@@ -23,6 +23,9 @@ examples/                 # demo diagrams: gen-diagrams.py / gen-all-diagrams.py
 test/                     # integration tests + post-render checks
   render.test.mjs         #   run: node test/render.test.mjs
   check.mjs               #   run: node test/check.mjs <scene.excalidraw> <rendered.svg>
+  check-ink.mjs           #   pixel ink-density check (catches blank diagrams);
+                          #   zero-dep PNG decode. run: node test/check-ink.mjs <png-dir>
+                          #   or node test/check-ink.mjs (renders on the fly, slow)
 assets/diagram.{svg,png}  # rendered example shown in the README
 ```
 

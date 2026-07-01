@@ -157,7 +157,10 @@ examples/                    # demo diagrams + generators
   all/                       # scene JSONs (25)
 test/                        # integration tests + post-render checks
   render.test.mjs            # 11 integration tests (run: node test/render.test.mjs)
-  check.mjs                  # regression guard (run: node test/check.mjs <scene> <svg>)
+  check.mjs                  # structural regression guard (run: node test/check.mjs <scene> <svg>)
+  check-ink.mjs              # pixel ink-density check, catches blank diagrams
+                             #   node test/check-ink.mjs <dir-of-pngs>
+                             #   node test/check-ink.mjs            # render-on-the-fly
 assets/                      # README demo image
 ```
 
